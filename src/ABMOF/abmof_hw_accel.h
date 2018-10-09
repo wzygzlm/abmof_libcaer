@@ -52,4 +52,6 @@ void topHW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t idx, ap_int<16> *miniSumRet);
 
 void parseEvents(const uint64_t * data, int32_t eventsArraySize, outputDataElement_t *eventSlice);
 
+void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice);
+
 #endif
