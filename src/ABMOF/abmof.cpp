@@ -15,6 +15,8 @@
 // #include "sds_utils.h"
 
 // TODO, hardcode now, should adapt to the real chip size.  uchar slices[SLICES_NUMBER][DVS_HEIGHT][DVS_WIDTH]; 
+uchar slices[SLICES_NUMBER][DVS_HEIGHT][DVS_WIDTH];
+
 // Current slice index
 static int8_t currentIdx = 0;
 
@@ -103,7 +105,7 @@ static void *displayTCP(void *ptr)
     //OpenCV Code
     //----------------------------------------------------------
 
-    cv::Mat img = cv::Mat(DVS_HEIGHT, DVS_WIDTH, CV_8UC1, eventSliceSW);
+    cv::Mat img = cv::Mat(DVS_HEIGHT, DVS_WIDTH, CV_8UC1, slices[currentIdx]);
      //make it continuous
     if (!img.isContinuous()) {
         img = img.clone();
@@ -231,7 +233,7 @@ static void *displayUDP(void *ptr)
     //----------------------------------------------------------
 
 
-    cv::Mat img = cv::Mat(DVS_HEIGHT, DVS_WIDTH, CV_8UC1, eventSliceSW);
+    cv::Mat img = cv::Mat(DVS_HEIGHT, DVS_WIDTH, CV_8UC1, slices[currentIdx]);
      //make it continuous
     if (!img.isContinuous()) {
         img = img.clone();
