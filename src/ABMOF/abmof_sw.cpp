@@ -19,11 +19,11 @@ void resetPixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 {
 	int8_t yNewIdx = y%COMBINED_PIXELS;
-//	cout << "Data before write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
+	cout << "Data before write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 	pix_t tmp = slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx);
 	tmp += 1;
 	slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) = tmp;
-//	cout << "Data after write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
+	cout << "Data after write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 }
 
 void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceIdx_t sliceIdxTag,
@@ -80,10 +80,7 @@ void colSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 	}
 }
 
-// Set the initial value as the max integer, cannot be 0x7fff, DON'T KNOW WHY.
-
-static ap_int<16> miniRetVal = 0x7fff;
-static ap_uint<6> minOFRet = ap_uint<6>(0xff);
+// Set the initial value as the max integer, cannot be 0x7fff, DON'T KNOW WHY.  static ap_int<16> miniRetVal = 0x7fff; static ap_uint<6> minOFRet = ap_uint<6>(0xff);
 
 static ap_int<16> miniSumTmp[2*SEARCH_DISTANCE + 1] = {0, 0, 0, 0, 0, 0, 0};
 static ap_int<16> localSumReg[BLOCK_SIZE][2*SEARCH_DISTANCE + 1];
@@ -150,38 +147,26 @@ void miniSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 		}
 	}
 
-//	cout << "OF_x is: " << OFRet_x << "\t OF_y is: " << OFRet_y << endl;
+	cout << "OF_x is: " << OFRet_x << "\t OF_y is: " << OFRet_y << endl;
 
 	*miniSumRet = miniRetVal;
 	*OFRet = minOFRet;
 
-//	std::cout << "miniSumRetSW is: " << *miniSumRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
+	std::cout << "miniSumRetSW is: " << *miniSumRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
 //	std::cout << std::dec;    // Restore dec mode
 }
 
+static uint16_t areaEventRegsSW[AREA_NUMBER][AREA_NUMBER];
+static uint16_t areaEventThrSW = 1000;
+
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
 {
-	glPLActiveSliceIdxSW--;
+//	glPLActiveSliceIdxSW--;
 	sliceIdx_t idx = glPLActiveSliceIdxSW;
-
-	// Check the accumulation slice is clear or not
-	for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
-	{
-		for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
-		{
-			if (slicesSW[idx][xAddr][yAddr/COMBINED_PIXELS] != 0)
-			{
-				for(int r = 0; r < 1000; r++)
-				{
-					cout << "Ha! I caught you, the pixel which is not clear!" << endl;
-					cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << idx << endl;
-				}
-			}
-		}
-	}
 
 	for(int32_t i = 0; i < eventsArraySize; i++)
 	{
+        cout << "Current Event packet's event number is: " << eventsArraySize << endl;
 		uint64_t tmp = *dataStream++;
 		ap_uint<8> xWr, yWr;
 		xWr = ((tmp) >> POLARITY_X_ADDR_SHIFT) & POLARITY_X_ADDR_MASK;
@@ -192,9 +177,51 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		ap_int<16> miniRet;
 		ap_uint<6> OFRet;
 
+        uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
+        c = c + 1;
+        areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
+
+        // The area threshold reached, rotate the slice index and clear the areaEventRegs.
+        if (c > areaEventThrSW)
+        {
+            glPLActiveSliceIdxSW--;
+            sliceIdx_t idx = glPLActiveSliceIdxSW;
+
+            // Check the accumulation slice is clear or not
+            for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
+            {
+                for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
+                {
+                    if (slicesSW[idx][xAddr][yAddr/COMBINED_PIXELS] != 0)
+                    {
+                        for(int r = 0; r < 1000; r++)
+                        {
+                            cout << "Ha! I caught you, the pixel which is not clear!" << endl;
+                            cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << idx << endl;
+                        }
+                    }
+                }
+            }
+
+            for(int areaX = 0; areaX < AREA_NUMBER; areaX++)
+            {
+                for(int areaY = 0; areaY < AREA_NUMBER; areaY++)
+                {
+                    areaEventRegsSW[areaX][areaY] = 0;
+                }
+            }
+
+           for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)
+           {
+               resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
+               resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
+           }
+        }
+        
+
 		writePixSW(xWr, yWr, idx);
 
-		resetPixSW(i/(PIXS_PER_COL), (i % (PIXS_PER_COL)) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
+//		resetPixSW(i/(PIXS_PER_COL), (i % (PIXS_PER_COL)) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
 //				resetPix(i/PIXS_PER_COL, (i % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
 //				resetPix(i, 64, (sliceIdx_t)(idx + 3));
 //				resetPix(i, 96, (sliceIdx_t)(idx + 3));
@@ -241,7 +268,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 
 	resetLoop: for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)
 	{
-		resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
-		resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
+//		resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
+//		resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(idx + 3));
 	}
 }

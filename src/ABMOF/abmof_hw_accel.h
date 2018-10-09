@@ -27,6 +27,8 @@ typedef ap_axiu<32,1,1,1> outputDataElement_t;
 
 #define BLOCK_SIZE 11
 #define SEARCH_DISTANCE 3
+#define AREA_NUMBER 8
+#define AREA_SIZE (SLICE_WIDTH/AREA_NUMBER)
 
 #define BLOCK_COL_PIXELS BITS_PER_PIXEL * (BLOCK_SIZE + 2 * SEARCH_DISTANCE)
 

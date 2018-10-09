@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -std=c++11 -g -pedantic -Wall -Wextra -O2
+CFLAGS = -std=c++11 -g -pedantic -Wall -Wextra -O1
 SRC = src/main.cpp src/ABMOF/abmof.cpp src/ABMOF/abmof_sw.cpp
 PROG = abmof_libcaer
 
