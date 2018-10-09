@@ -242,8 +242,7 @@ static void *displayUDP(void *ptr)
     if (!img.isContinuous()) {
         img = img.clone();
     }
-
-    int imgSize = img.total() * img.elemSize();
+int imgSize = img.total() * img.elemSize();
     int bytes = 0;
     int key;
 
@@ -391,6 +390,7 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //    sds_utils::perf_counter hw_ctr, sw_ctr;
 //
 //    sw_ctr.start();
+    memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     parseEventsSW(data, eventsArraySize, eventSliceSW);
     displaySliceLocal(eventsArraySize);
 
