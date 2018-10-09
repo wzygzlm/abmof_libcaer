@@ -53,9 +53,7 @@ void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceId
 void colSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 		pix_t in2[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 		int16_t out[2 * SEARCH_DISTANCE + 1])
-{
-//	cout << "in1 is: " << endl;
-//	for (int m = 0; m < BLOCK_SIZE + 2 * SEARCH_DISTANCE; m++)
+{ //	cout << "in1 is: " << endl; //	for (int m = 0; m < BLOCK_SIZE + 2 * SEARCH_DISTANCE; m++)
 //	{
 //		cout << in1[m] << " ";
 //	}
@@ -158,6 +156,7 @@ void miniSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 }
 
 static uint16_t areaEventRegsSW[AREA_NUMBER][AREA_NUMBER];
+static uint16_t OFRetRegsSW[2 * SEARCH_DISTANCE + 1][2 * SEARCH_DISTANCE + 1];
 static uint16_t areaEventThrSW = 1000;
 
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
@@ -266,11 +265,31 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 			miniSADSumSW(out1, out2, xOffSet, &miniRet, &OFRet);   // Here k starts from 1 not 0.
 
 		}
+
 		apUint17_t tmp1 = apUint17_t(xWr.to_int() + (yWr.to_int() << 8) + (pol << 16));
 		ap_int<9> tmp2 = miniRet.range(8, 0);
 		apUint6_t tmpOF = OFRet;
 		ap_uint<32> output = (tmp2, (tmpOF, tmp1));
 		*eventSlice++ = output.to_int();
+
+        /* -----------------Feedback part------------------------ */
+        uint16_t OFRetHistCnt = OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(3, 0)];
+        OFRetHistCnt = OFRetHistCnt + 1;
+        OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)] = OFRetHistCnt;
+
+        uint16_t countSum = 0;
+        uint32_t radiusSum =  0;
+        for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
+        { 
+            for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
+            {
+                uint16_t count = OFRetRegsSW[OFRetHistX][OFRetHistY];
+                uint16_t radius = pow(OFRetHistX,  2) + pow(OFRetHistY,  2);
+                countSum += count;
+                radiusSum += radius * count;
+            }
+        }
+
 	}
 
 	resetLoop: for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)
