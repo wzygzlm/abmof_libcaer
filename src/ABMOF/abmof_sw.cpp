@@ -80,7 +80,8 @@ void colSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 	}
 }
 
-// Set the initial value as the max integer, cannot be 0x7fff, DON'T KNOW WHY.  static ap_int<16> miniRetVal = 0x7fff; static ap_uint<6> minOFRet = ap_uint<6>(0xff);
+// Set the initial value as the max integer, cannot be 0x7fff, DON'T KNOW WHY.  
+static ap_int<16> miniRetVal = 0x7fff; static ap_uint<6> minOFRet = ap_uint<6>(0xff);
 
 static ap_int<16> miniSumTmp[2*SEARCH_DISTANCE + 1] = {0, 0, 0, 0, 0, 0, 0};
 static ap_int<16> localSumReg[BLOCK_SIZE][2*SEARCH_DISTANCE + 1];
@@ -186,6 +187,12 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
         {
             glPLActiveSliceIdxSW--;
             sliceIdx_t idx = glPLActiveSliceIdxSW;
+
+            for(int r = 0; r < 1000; r++)
+            {
+                cout << "Rotated successfully!!!!" << endl;
+                cout << "x is: " << xWr << "\t y is: " << yWr << "\t idx is: " << idx << endl;
+            }
 
             // Check the accumulation slice is clear or not
             for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
