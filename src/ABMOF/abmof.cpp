@@ -36,7 +36,7 @@ static void *displayTCP(void *);
 
 static void *displayUDP(void *);
 
-static void displaySliceLocal(int32_t eventsArraySize, int32_t *eventSlice);
+// static void displaySliceLocal(int32_t eventsArraySize, int32_t *eventSlice);
 
 // TCP server
 int init_socket_TCP(int port)
@@ -290,49 +290,49 @@ void sendEventSlice()
 // embedded board. For embedded board, the data still needs to be sent to
 // the remote server.
 
-void displaySliceLocal(int32_t eventsArraySize)
-{
-    Mat img, img_color; int key; 
-    img = Mat::ones(180 , 240, CV_8UC1)*127;    
-
-    cvtColor(img, img_color, COLOR_GRAY2BGR);
-
-    for(int bufIndex = 4; bufIndex  < eventsArraySize; bufIndex = bufIndex + 4)
-    {
-        uchar x = eventSliceSW[bufIndex];
-        uchar y = eventSliceSW[bufIndex + 1];
-        uchar pol = eventSliceSW[bufIndex + 2] & 0x01; // The last bit of the third bytes is polarity.
-        char OF_x = (eventSliceSW[bufIndex + 2] & 0x0e) - 3;
-        char OF_y = ((eventSliceSW[bufIndex + 2] & 0x70) >> 4) - 3;
-
-        // Only print once
-        if (bufIndex == 40) printf("OF_x is  %d, OF_y is %d.\n", OF_x, OF_y);
-
-        Point startPt = Point(x, y);
-        Point endPt = Point(x + OF_x, y + OF_y);
-
-        //g            if(OF_x != -3 && OF_y != -3) cv::arrowedLine(img_color, startPt, endPt, (0, 0, 255), 1);
-
-        if(pol == 1)
-        {
-            img_color.at<Vec3b>(y, x)[0] = 255;
-            img_color.at<Vec3b>(y, x)[1] = 255;
-            img_color.at<Vec3b>(y, x)[2] = 255;
-        }
-        else
-        {
-            img_color.at<Vec3b>(y, x)[0] = 0;
-            img_color.at<Vec3b>(y, x)[1] = 0;
-            img_color.at<Vec3b>(y, x)[2] = 0;
-        }
-
-    }
-
-    cv::imshow("Event slice Client", img_color); 
-
-    // if (key = cv::waitKey(10) >= 0) break;
-    if (key = cv::waitKey(10) >= 0);
-}
+//void displaySliceLocal(int32_t eventsArraySize)
+//{
+//    Mat img, img_color; int key; 
+//    img = Mat::ones(180 , 240, CV_8UC1)*127;    
+//
+//    cvtColor(img, img_color, COLOR_GRAY2BGR);
+//
+//    for(int bufIndex = 4; bufIndex  < eventsArraySize; bufIndex = bufIndex + 4)
+//    {
+//        uchar x = eventSliceSW[bufIndex];
+//        uchar y = eventSliceSW[bufIndex + 1];
+//        uchar pol = eventSliceSW[bufIndex + 2] & 0x01; // The last bit of the third bytes is polarity.
+//        char OF_x = (eventSliceSW[bufIndex + 2] & 0x0e) - 3;
+//        char OF_y = ((eventSliceSW[bufIndex + 2] & 0x70) >> 4) - 3;
+//
+//        // Only print once
+//        if (bufIndex == 40) printf("OF_x is  %d, OF_y is %d.\n", OF_x, OF_y);
+//
+//        Point startPt = Point(x, y);
+//        Point endPt = Point(x + OF_x, y + OF_y);
+//
+//        //g            if(OF_x != -3 && OF_y != -3) cv::arrowedLine(img_color, startPt, endPt, (0, 0, 255), 1);
+//
+//        if(pol == 1)
+//        {
+//            img_color.at<Vec3b>(y, x)[0] = 255;
+//            img_color.at<Vec3b>(y, x)[1] = 255;
+//            img_color.at<Vec3b>(y, x)[2] = 255;
+//        }
+//        else
+//        {
+//            img_color.at<Vec3b>(y, x)[0] = 0;
+//            img_color.at<Vec3b>(y, x)[1] = 0;
+//            img_color.at<Vec3b>(y, x)[2] = 0;
+//        }
+//
+//    }
+//
+//    cv::imshow("Event slice Client", img_color); 
+//
+//    // if (key = cv::waitKey(10) >= 0) break;
+//    if (key = cv::waitKey(10) >= 0);
+//}
 
 
 int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPkt, int port, int eventThreshold, int socketType)
@@ -392,7 +392,7 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     parseEventsSW(data, eventsArraySize, eventSliceSW);
-    displaySliceLocal(eventsArraySize);
+//    displaySliceLocal(eventsArraySize);
 
 //    sw_ctr.stop();
 //

@@ -151,10 +151,10 @@ void miniSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 	}
 
 //	cout << "OF_x is: " << OFRet_x << "\t OF_y is: " << OFRet_y << endl;
-//
-//	*miniSumRet = miniRetVal;
-//	*OFRet = minOFRet;
-//
+
+	*miniSumRet = miniRetVal;
+	*OFRet = minOFRet;
+
 //	std::cout << "miniSumRetSW is: " << *miniSumRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
 //	std::cout << std::dec;    // Restore dec mode
 }
