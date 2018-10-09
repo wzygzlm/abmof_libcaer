@@ -28,7 +28,7 @@ static uint16_t retSocket;
 static int32_t eventSliceSW[DVS_HEIGHT * DVS_WIDTH];
 
 // To trigger the tcp to send event slice
-static bool sendFlg = false;
+static bool sendFlg = true;
 
 static void *displayTCP(void *);
 
