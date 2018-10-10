@@ -534,7 +534,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
                 {
                     areaEventThrSW -= areaEventThrSW * 0.05;
                 }
-                else if (avgMatchDistance > avgTargetDistance)
+                else if (avgMatchDistance < avgTargetDistance)
                 {
                     areaEventThrSW += areaEventThrSW * 0.05;
                 }
