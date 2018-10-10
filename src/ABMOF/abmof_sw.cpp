@@ -515,7 +515,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
             {
                 for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
                 {
-                    uint16_t count = OFRetRegsSW[OFRetHistX][OFRetHistY];
+                    uint16_t count = OFRetRegsSW[OFRetHistX + SEARCH_DISTANCE][OFRetHistY + SEARCH_DISTANCE];
                     float radius = sqrt(pow(OFRetHistX,  2) + pow(OFRetHistY,  2));
                     countSum += count;
                     radiusCountSum += radius * count;
