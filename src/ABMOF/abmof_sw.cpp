@@ -160,6 +160,56 @@ void miniSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 	std::cout << std::dec;    // Restore dec mode
 }
 
+void blockSADSW(pix_t blockIn1[BLOCK_SIZE][BLOCK_SIZE], pix_t blockIn2[BLOCK_SIZE][BLOCK_SIZE], uint16_t *sumRet)
+{
+    uint16_t tmpSum = 0;
+    for(uint8_t i = 0; i < BLOCK_SIZE; i++)
+    {
+        for(uint8_t j = 0; j < BLOCK_SIZE; j++)
+        {
+            tmpSum += abs(blockIn1[i][j] - blockIn2[i][j]);
+        }
+    }
+    *sumRet = tmpSum;
+}
+
+void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
+        pix_t tagBlock[BLOCK_SIZE + 2 * SEARCH_DISTANCE][BLOCK_SIZE + 2 * SEARCH_DISTANCE],
+        ap_int<16> *miniRet, ap_uint<6> *OFRet)
+{
+    uint16_t tmpSum = 0x7fff;
+    ap_uint<3> tmpOF_x = ap_uint<3>(7);
+    ap_uint<3> tmpOF_y = ap_uint<3>(7);
+
+    for(uint8_t xOffset = 0; xOffset < 2 * SEARCH_DISTANCE + 1; xOffset++)
+    {
+        for(uint8_t yOffset = 0; yOffset < 2 * SEARCH_DISTANCE + 1; yOffset++)
+        {
+            pix_t tagBlockIn[BLOCK_SIZE][BLOCK_SIZE];
+            uint16_t tmpBlockSum;
+            for(uint8_t i = 0; i < BLOCK_SIZE; i++)
+            {
+                for(uint8_t j = 0; j < BLOCK_SIZE; j++)
+                {
+                    tagBlockIn[i][j] = tagBlock[i + xOffset][j + yOffset];
+                }
+            }
+            blockSADSW(refBlock, tagBlockIn, &tmpBlockSum);
+
+            if(tmpBlockSum < tmpSum)
+            {
+                tmpSum = tmpBlockSum;
+                tmpOF_x = ap_uint<3>(xOffset);
+                tmpOF_y = ap_uint<3>(yOffset);
+            }
+        }
+    }
+    *miniRet = tmpSum;
+    *OFRet = tmpOF_y.concat(tmpOF_x);
+}
+
+
+
 void testMiniSADSumWrapperSW(apIntBlockCol_t *input1, apIntBlockCol_t *input2, int16_t eventCnt, apUint15_t *miniSum, apUint6_t *OF)
 {
 	pix_t ref[BLOCK_SIZE + 2 * SEARCH_DISTANCE], tag[BLOCK_SIZE + 2 * SEARCH_DISTANCE];
@@ -481,18 +531,31 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 //			miniSumTmp[j] = ap_int<16>(0);
 //		}
 
-		for(int8_t xOffSet = 0; xOffSet < BLOCK_SIZE + 2 * SEARCH_DISTANCE; xOffSet++)
-		{
+        pix_t block1[BLOCK_SIZE][BLOCK_SIZE];
+        pix_t block2[BLOCK_SIZE + 2 * SEARCH_DISTANCE][BLOCK_SIZE + 2 * SEARCH_DISTANCE];
 
-			pix_t out1[BLOCK_SIZE + 2 * SEARCH_DISTANCE];
-			pix_t out2[BLOCK_SIZE + 2 * SEARCH_DISTANCE];
+		for(int8_t xOffset = 0; xOffset < BLOCK_SIZE + 2 * SEARCH_DISTANCE; xOffset++)
+        {
+            pix_t out1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
 
+			readBlockColsSW(xWr - BLOCK_SIZE/2 - SEARCH_DISTANCE + xOffset, yWr , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), out1, out2);
 
-			readBlockColsSW(xWr + xOffSet, yWr , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), out1, out2);
+            for(int8_t yCopyOffset = 0; yCopyOffset < BLOCK_SIZE; yCopyOffset++)
+            {
+                if (xOffset >= SEARCH_DISTANCE && xOffset < BLOCK_SIZE + SEARCH_DISTANCE)
+                {
+                    block1[xOffset - 3][yCopyOffset] = out1[yCopyOffset + SEARCH_DISTANCE];
+                }
+            }
 
-			miniSADSumSW(out1, out2, xOffSet, &miniRet, &OFRet);   // Here k starts from 1 not 0.
-
+            for(int8_t yCopyOffset = 0; yCopyOffset < BLOCK_SIZE + 2 * SEARCH_DISTANCE; yCopyOffset++)
+            {
+                block2[xOffset][yCopyOffset] = out2[yCopyOffset];
+            }
 		}
+
+        miniBlockSADSW(block1, block2, &miniRet, &OFRet);
 
 		apUint17_t tmp1 = apUint17_t(xWr.to_int() + (yWr.to_int() << 8) + (pol << 16));
 		ap_int<9> tmp2 = miniRet.range(8, 0);
@@ -501,45 +564,45 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		*eventSlice++ = output.to_int();
 
         /* -----------------Feedback part------------------------ */
-        if(miniRet <= tmp2 && miniRet > 0 && OFRet != 0x3f)
-        {
-            uint16_t OFRetHistCnt = OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(3, 0)];
-            OFRetHistCnt = OFRetHistCnt + 1;
-            OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)] = OFRetHistCnt;
-
-            uint16_t countSum = 0;
-            uint16_t histCountSum = 0;
-            float radiusSum =  0;
-            float radiusCountSum =  0;
-            for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
-            {
-                for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
-                {
-                    uint16_t count = OFRetRegsSW[OFRetHistX + SEARCH_DISTANCE][OFRetHistY + SEARCH_DISTANCE];
-                    float radius = sqrt(pow(OFRetHistX,  2) + pow(OFRetHistY,  2));
-                    countSum += count;
-                    radiusCountSum += radius * count;
-
-                    histCountSum += 1;
-                    radiusSum += radius;
-                }
-            }
-
-            if (countSum >= 10)
-            {
-                float avgMatchDistance = radiusCountSum / countSum;
-                float avgTargetDistance = radiusSum / histCountSum; 
-
-                if(avgMatchDistance > avgTargetDistance )
-                {
-                    areaEventThrSW -= areaEventThrSW * 0.05;
-                }
-                else if (avgMatchDistance < avgTargetDistance)
-                {
-                    areaEventThrSW += areaEventThrSW * 0.05;
-                }
-            }
-        }
+//        if(miniRet <= tmp2 && miniRet > 0 && OFRet != 0x3f)
+//        {
+//            uint16_t OFRetHistCnt = OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)];
+//            OFRetHistCnt = OFRetHistCnt + 1;
+//            OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)] = OFRetHistCnt;
+//
+//            uint16_t countSum = 0;
+//            uint16_t histCountSum = 0;
+//            float radiusSum =  0;
+//            float radiusCountSum =  0;
+//            for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
+//            {
+//                for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
+//                {
+//                    uint16_t count = OFRetRegsSW[OFRetHistX + SEARCH_DISTANCE][OFRetHistY + SEARCH_DISTANCE];
+//                    float radius = sqrt(pow(OFRetHistX,  2) + pow(OFRetHistY,  2));
+//                    countSum += count;
+//                    radiusCountSum += radius * count;
+//
+//                    histCountSum += 1;
+//                    radiusSum += radius;
+//                }
+//            }
+//
+//            if (countSum >= 10)
+//            {
+//                float avgMatchDistance = radiusCountSum / countSum;
+//                float avgTargetDistance = radiusSum / histCountSum; 
+//
+//                if(avgMatchDistance > avgTargetDistance )
+//                {
+//                    areaEventThrSW -= areaEventThrSW * 0.05;
+//                }
+//                else if (avgMatchDistance < avgTargetDistance)
+//                {
+//                    areaEventThrSW += areaEventThrSW * 0.05;
+//                }
+//            }
+//        }
 	}
 
 	resetLoop: for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)
