@@ -21,11 +21,11 @@ void resetPixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 {
 	int8_t yNewIdx = y%COMBINED_PIXELS;
-	cout << "Data before write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
+//	cout << "Data before write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 	pix_t tmp = slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx);
 	tmp += 1;
 	slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) = tmp;
-	cout << "Data after write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
+//	cout << "Data after write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 }
 
 void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceIdx_t sliceIdxTag,
@@ -181,6 +181,28 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
     ap_uint<3> tmpOF_x = ap_uint<3>(7);
     ap_uint<3> tmpOF_y = ap_uint<3>(7);
 
+    cout << "Reference block is: " << endl;
+    for(uint8_t blockX = 0; blockX < BLOCK_SIZE; blockX++)
+    {
+        for(uint8_t blockY = 0; blockY < BLOCK_SIZE; blockY++)
+        {
+            cout << refBlock[blockX][blockY] << "\t";
+        }
+        cout << endl;
+    }
+    cout << endl;
+
+    cout << "target block is: " << endl;
+    for(uint8_t blockX = 0; blockX < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockX++)
+    {
+        for(uint8_t blockY = 0; blockY < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockY++)
+        {
+            cout << tagBlock[blockX][blockY] << "\t";
+        }
+        cout << endl;
+    }
+    cout << endl;
+
     for(uint8_t xOffset = 0; xOffset < 2 * SEARCH_DISTANCE + 1; xOffset++)
     {
         for(uint8_t yOffset = 0; yOffset < 2 * SEARCH_DISTANCE + 1; yOffset++)
@@ -206,6 +228,8 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
     }
     *miniRet = tmpSum;
     *OFRet = tmpOF_y.concat(tmpOF_x);
+	std::cout << "miniSumRetSW is: " << *miniRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
+	std::cout << std::dec;    // Restore dec mode
 }
 
 
@@ -545,7 +569,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
             {
                 if (xOffset >= SEARCH_DISTANCE && xOffset < BLOCK_SIZE + SEARCH_DISTANCE)
                 {
-                    block1[xOffset - 3][yCopyOffset] = out1[yCopyOffset + SEARCH_DISTANCE];
+                    block1[xOffset - SEARCH_DISTANCE][yCopyOffset] = out1[yCopyOffset + SEARCH_DISTANCE];
                 }
             }
 
