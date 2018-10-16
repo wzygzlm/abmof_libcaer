@@ -10,7 +10,7 @@
 // standard opencv, used in standard opencv environment
 #include "opencv2/opencv.hpp"
 #include <vector>
-using namespace cv; 
+using namespace cv;
 
 #include <math.h>
 
@@ -334,6 +334,28 @@ void sendEventSlice()
 //    if (key = cv::waitKey(10) >= 0);
 //}
 
+void creatEventdata(int event_num, uint64_t *data)
+{
+    int x = 10;
+    int y = 12;
+    int width = 45;
+    int lenth = 72;
+    int polarity = 1;
+    int bit = 1;
+    uint64_t temp = 0;
+    uint64_t *begin = 0;
+    begin = data;
+
+    for(int i = 0; i < event_num; i++)
+    {
+        temp = ((x + (rand() % width)) << 17)+((y + (rand() % lenth)) << 2)+(polarity << 1) + 1;
+        *data++ = temp;
+    }
+
+    data = begin;
+}
+
+
 
 int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPkt, int port, int eventThreshold, int socketType)
 {
@@ -391,6 +413,7 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
+    //creatEventdata(500, data);
     parseEventsSW(data, eventsArraySize, eventSliceSW);
 //    displaySliceLocal(eventsArraySize);
 
