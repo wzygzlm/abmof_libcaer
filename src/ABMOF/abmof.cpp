@@ -413,7 +413,7 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
-    //creatEventdata(500, data);
+    creatEventdata(500, data);
     parseEventsSW(data, eventsArraySize, eventSliceSW);
 //    displaySliceLocal(eventsArraySize);
 
