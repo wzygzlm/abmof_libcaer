@@ -357,6 +357,7 @@ void creatEventdata(int event_num, uint64_t *data)
 
 
 
+
 int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPkt, int port, int eventThreshold, int socketType)
 {
 	if (!initSocketFlg)
@@ -413,7 +414,8 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
-    creatEventdata(500, data);
+    int event_num = 500;
+    creatEventdata(event_num, data);
     parseEventsSW(data, eventsArraySize, eventSliceSW);
 //    displaySliceLocal(eventsArraySize);
 

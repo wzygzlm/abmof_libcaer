@@ -4,9 +4,9 @@
 #include <iomanip>
 #include <cstdlib>
 using namespace std;
-#include "time.h"
 #include "abmof.h"
 #include "abmof_hw_accel.h"
+#include "time.h"
 
 #define TEST_TIMES 10
 
@@ -451,6 +451,57 @@ static uint16_t areaEventRegsSW[AREA_NUMBER][AREA_NUMBER];
 static float areaEventThrSW = 1000;
 static uint16_t OFRetRegsSW[2 * SEARCH_DISTANCE + 1][2 * SEARCH_DISTANCE + 1];
 
+
+static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateFlg, uint16_t *thrRet)
+{
+    if(miniSumRet <= 0x1ff && miniSumRet > 0 && OFRet != 0x3f)
+    {
+        uint16_t OFRetHistCnt = OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)];
+        OFRetHistCnt = OFRetHistCnt + 1;
+        OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)] = OFRetHistCnt;
+
+        if(rotateFlg)
+        {
+            uint16_t countSum = 0;
+            uint16_t histCountSum = 0;
+            uint16_t radiusSum =  0;
+            uint16_t radiusCountSum =  0;
+
+            for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
+            {
+                for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
+                {
+                    uint16_t count = OFRetRegsSW[OFRetHistX+SEARCH_DISTANCE][OFRetHistY+SEARCH_DISTANCE];
+                    float radius = pow(OFRetHistX,  2) + pow(OFRetHistY,  2);
+                    countSum += count;
+                    radiusCountSum += radius * count;
+
+                    histCountSum += 1;
+                    radiusSum += radius;
+                }
+            }
+
+            if (countSum >= 10)
+            {
+                float avgMatchDistance = (float)radiusCountSum / countSum;
+                float avgTargetDistance = (float)radiusSum / histCountSum;
+
+                if(avgMatchDistance > avgTargetDistance )
+                {
+                    areaEventThrSW -= areaEventThrSW * 3/64;
+                }
+                else if (avgMatchDistance < avgTargetDistance)
+                {
+                    areaEventThrSW += areaEventThrSW *3/64;
+                }
+            }
+        }
+
+    }
+    *thrRet = areaEventThrSW;
+
+}
+
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
 {
 //	glPLActiveSliceIdxSW--;
@@ -473,11 +524,14 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
         c = c + 1;
         areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
 
+        apUint1_t rotateFlg = 0;
+
         // The area threshold reached, rotate the slice index and clear the areaEventRegs.
         if (c > areaEventThrSW)
         {
             glPLActiveSliceIdxSW--;
 //            idx = glPLActiveSliceIdxSW;
+            rotateFlg = 1;
 
             for(int r = 0; r < 1000; r++)
             {
@@ -588,45 +642,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		*eventSlice++ = output.to_int();
 
         /* -----------------Feedback part------------------------ */
-//        if(miniRet <= tmp2 && miniRet > 0 && OFRet != 0x3f)
-//        {
-//            uint16_t OFRetHistCnt = OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)];
-//            OFRetHistCnt = OFRetHistCnt + 1;
-//            OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)] = OFRetHistCnt;
-//
-//            uint16_t countSum = 0;
-//            uint16_t histCountSum = 0;
-//            float radiusSum =  0;
-//            float radiusCountSum =  0;
-//            for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
-//            {
-//                for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
-//                {
-//                    uint16_t count = OFRetRegsSW[OFRetHistX + SEARCH_DISTANCE][OFRetHistY + SEARCH_DISTANCE];
-//                    float radius = sqrt(pow(OFRetHistX,  2) + pow(OFRetHistY,  2));
-//                    countSum += count;
-//                    radiusCountSum += radius * count;
-//
-//                    histCountSum += 1;
-//                    radiusSum += radius;
-//                }
-//            }
-//
-//            if (countSum >= 10)
-//            {
-//                float avgMatchDistance = radiusCountSum / countSum;
-//                float avgTargetDistance = radiusSum / histCountSum; 
-//
-//                if(avgMatchDistance > avgTargetDistance )
-//                {
-//                    areaEventThrSW -= areaEventThrSW * 0.05;
-//                }
-//                else if (avgMatchDistance < avgTargetDistance)
-//                {
-//                    areaEventThrSW += areaEventThrSW * 0.05;
-//                }
-//            }
-//        }
+//		feedbackSW(miniRet, OFRet, rotateFlg, &areaEventThrSW);
 	}
 
 	resetLoop: for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)
