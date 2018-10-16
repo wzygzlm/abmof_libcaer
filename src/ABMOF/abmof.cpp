@@ -334,11 +334,11 @@ void sendEventSlice()
 //    if (key = cv::waitKey(10) >= 0);
 //}
 
-void creatEventdata(int event_num, uint64_t *data)
+void creatEventdata(int x_pos, int y_pos, int event_num, uint64_t *data)
 {
-    int x = 10;
-    int y = 12;
-    int width = 45;
+    int x = x_pos;
+    int y = y_pos;
+    int width = 15;
     int lenth = 72;
     int polarity = 1;
     int bit = 1;
@@ -415,7 +415,7 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     int event_num = eventsArraySize;
-    creatEventdata(event_num, data);
+    creatEventdata((imgNum)%100 , 0, event_num, data);
     parseEventsSW(data, eventsArraySize, eventSliceSW);
 //    displaySliceLocal(eventsArraySize);
 
