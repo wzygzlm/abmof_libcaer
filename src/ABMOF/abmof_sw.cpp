@@ -218,11 +218,11 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
             }
             blockSADSW(refBlock, tagBlockIn, &tmpBlockSum);
 
-            if(tmpBlockSum < tmpSum)
+            if(tmpBlockSum <= tmpSum)
             {
                 tmpSum = tmpBlockSum;
-                tmpOF_x = ap_uint<3>(xOffset);
-                tmpOF_y = ap_uint<3>(yOffset);
+                tmpOF_y = ap_uint<3>(xOffset);
+                tmpOF_x = ap_uint<3>(yOffset);
             }
         }
     }
@@ -504,8 +504,14 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
 {
-//	glPLActiveSliceIdxSW--;
-//	sliceIdx_t idx = glPLActiveSliceIdxSW;
+	glPLActiveSliceIdxSW--;
+	sliceIdx_t idx = glPLActiveSliceIdxSW;
+
+    for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)
+    {
+        resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL) * COMBINED_PIXELS, (sliceIdx_t)(glPLActiveSliceIdxSW + 3));
+        resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(glPLActiveSliceIdxSW + 3));
+    }
 
 	for(int32_t i = 0; i < eventsArraySize; i++)
 	{
@@ -529,7 +535,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
         // The area threshold reached, rotate the slice index and clear the areaEventRegs.
         if (c > areaEventThrSW)
         {
-            glPLActiveSliceIdxSW--;
+//            glPLActiveSliceIdxSW--;
 //            idx = glPLActiveSliceIdxSW;
             rotateFlg = 1;
 
