@@ -355,6 +355,31 @@ void creatEventdata(int x_pos, int y_pos, int event_num, uint64_t *data)
     data = begin;
 }
 
+void creatEventdata_solid(int x_pos, int y_pos, uint64_t *data)
+{
+    int x = x_pos;
+    int y = y_pos;
+    int width = 15;
+    int lenth = 72;
+    int polarity = 1;
+    int bit = 1;
+    uint64_t temp = 0;
+    uint64_t *begin = 0;
+    begin = data;
+
+    for (int i = x; i <(x + width); i++)
+    {
+        for (int j = y; j <(y + lenth); j++)
+        {
+            temp = (i << 17)+(j << 2)+(polarity << 1) + 1;
+            *data++ = temp;
+        }
+    }
+
+    data = begin;
+}
+
+
 
 
 
@@ -407,7 +432,7 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 	{
 		eventsArraySize = DVS_HEIGHT * DVS_WIDTH / 4;
 	}
-
+    eventsArraySize = 1080;
 	uint64_t * data = (uint64_t *)malloc(eventsArraySize * eventPerSize);
 	memcpy(data, (void *)&(firstEvent.data), eventsArraySize * eventPerSize);
 //    sds_utils::perf_counter hw_ctr, sw_ctr;
@@ -415,7 +440,9 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     int event_num = eventsArraySize;
-    creatEventdata((imgNum)%100 , 0, event_num, data);
+    //creatEventdata((imgNum)%100 , 0, event_num, data);
+    creatEventdata_solid(50+(imgNum)%100 , 50, data);
+
     parseEventsSW(data, eventsArraySize, eventSliceSW);
 //    displaySliceLocal(eventsArraySize);
 
