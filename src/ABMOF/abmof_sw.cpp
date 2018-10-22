@@ -33,9 +33,7 @@ void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceId
 {
 	two_cols_pix_t refColData;
 	// concatenate two columns together
-	refColData = (slicesSW[sliceIdxRef][x][y/COMBINED_PIXELS], slicesSW[sliceIdxRef][x][ap_uint<3>(y/COMBINED_PIXELS - 1)]);
-//	cout << "refColData: " << refColData.range(255, 192) << endl;
-
+	refColData = (slicesSW[sliceIdxRef][x][y/COMBINED_PIXELS], slicesSW[sliceIdxRef][x][ap_uint<3>(y/COMBINED_PIXELS - 1)]); //	cout << "refColData: " << refColData.range(255, 192) << endl; 
 	// concatenate two columns together
 	two_cols_pix_t tagColData;
 	// Use explicit cast here, otherwise it will generate a lot of select operations which consumes more LUTs than MUXs.
@@ -513,9 +511,25 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
         resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(glPLActiveSliceIdxSW + 3));
     }
 
+    // Check the accumulation slice is clear or not
+    for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
+    {
+        for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
+        {
+            if (slicesSW[glPLActiveSliceIdxSW][xAddr][yAddr/COMBINED_PIXELS] != 0)
+            {
+                for(int r = 0; r < 1000; r++)
+                {
+                    cout << "Ha! I caught you, the pixel which is not clear!" << endl;
+                    cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
+                }
+            }
+        }
+    }
+
+        cout << "Current Event packet's event number is: " << eventsArraySize << endl;
 	for(int32_t i = 0; i < eventsArraySize; i++)
 	{
-        cout << "Current Event packet's event number is: " << eventsArraySize << endl;
 		uint64_t tmp = *dataStream++;
 		ap_uint<8> xWr, yWr;
 		xWr = ((tmp) >> POLARITY_X_ADDR_SHIFT) & POLARITY_X_ADDR_MASK;
@@ -527,7 +541,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		ap_uint<6> OFRet;
 
         uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
-        c = c + 1;
+//        c = c + 1;
         areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
 
         apUint1_t rotateFlg = 0;
@@ -546,20 +560,20 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
             }
 
             // Check the accumulation slice is clear or not
-            for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
-            {
-                for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
-                {
-                    if (slicesSW[glPLActiveSliceIdxSW][xAddr][yAddr/COMBINED_PIXELS] != 0)
-                    {
-                        for(int r = 0; r < 1000; r++)
-                        {
-                            cout << "Ha! I caught you, the pixel which is not clear!" << endl;
-                            cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
-                        }
-                    }
-                }
-            }
+//            for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
+//            {
+//                for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
+//                {
+//                    if (slicesSW[glPLActiveSliceIdxSW][xAddr][yAddr/COMBINED_PIXELS] != 0)
+//                    {
+//                        for(int r = 0; r < 1000; r++)
+//                        {
+//                            cout << "Ha! I caught you, the pixel which is not clear!" << endl;
+//                            cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
+//                        }
+//                    }
+//                }
+//            }
 
             for(int areaX = 0; areaX < AREA_NUMBER; areaX++)
             {

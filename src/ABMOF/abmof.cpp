@@ -359,13 +359,14 @@ void creatEventdata_solid(int x_pos, int y_pos, uint64_t *data)
 {
     int x = x_pos;
     int y = y_pos;
-    int width = 15;
-    int lenth = 72;
+    int width = 1;
+    int lenth = 23;
     int polarity = 1;
     int bit = 1;
     uint64_t temp = 0;
     uint64_t *begin = 0;
     begin = data;
+    *data++ = 0;
 
     for (int i = x; i <(x + width); i++)
     {
@@ -383,7 +384,7 @@ void creatEventdata_solid(int x_pos, int y_pos, uint64_t *data)
 
 
 
-int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPkt, int port, int eventThreshold, int socketType)
+int abmof(int port, int eventThreshold, int socketType)
 {
 	if (!initSocketFlg)
 	{
@@ -403,15 +404,15 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 	imgNum++;
 
 	// Get full timestamp and addresses of first event.
-	const libcaer::events::PolarityEvent &firstEvent = (*polarityPkt)[0];
-
-	int32_t ts = firstEvent.getTimestamp();
-	uint16_t x = firstEvent.getX();
-	uint16_t y = firstEvent.getY();
-	bool pol   = firstEvent.getPolarity();
-
-	int32_t eventsArraySize = (*polarityPkt).getEventNumber();
-	int32_t eventPerSize = (*polarityPkt).getEventSize();
+//	const libcaer::events::PolarityEvent &firstEvent = (*polarityPkt)[0];
+//
+//	int32_t ts = firstEvent.getTimestamp();
+//	uint16_t x = firstEvent.getX();
+//	uint16_t y = firstEvent.getY();
+//	bool pol   = firstEvent.getPolarity();
+//
+//	int32_t eventsArraySize = (*polarityPkt).getEventNumber();
+//	int32_t eventPerSize = (*polarityPkt).getEventSize();
 
     // Make suer sds_alloc allocate a right memory for eventSlice.
 //	if(eventSlice == NULL)
@@ -419,6 +420,9 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 //		eventSlice = (outputDataElement_t *)sds_alloc(DVS_HEIGHT * DVS_WIDTH);
 //		return retSocket;
 //	}
+    int eventsArraySize = 24;
+    int eventPerSize = 8;
+
 	if(eventsArraySize >= eventThreshold)
 	{
 		eventsArraySize = eventThreshold;
@@ -432,9 +436,8 @@ int abmof(std::shared_ptr<const libcaer::events::PolarityEventPacket> polarityPk
 	{
 		eventsArraySize = DVS_HEIGHT * DVS_WIDTH / 4;
 	}
-    eventsArraySize = 1080;
 	uint64_t * data = (uint64_t *)malloc(eventsArraySize * eventPerSize);
-	memcpy(data, (void *)&(firstEvent.data), eventsArraySize * eventPerSize);
+//	memcpy(data, (void *)&(firstEvent.data), eventsArraySize * eventPerSize);
 //    sds_utils::perf_counter hw_ctr, sw_ctr;
 //
 //    sw_ctr.start();
