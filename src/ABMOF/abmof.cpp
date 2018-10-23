@@ -334,6 +334,48 @@ void sendEventSlice()
 //    if (key = cv::waitKey(10) >= 0);
 //}
 
+
+int creatEventdataFromFile(int startLine, int event_num, uint64_t *data)
+{
+    ifstream file("jAER-events.txt");
+    string str; 
+    vector<int> values;
+    uint64_t *begin = 0;
+    begin = data;
+
+    // Nothing is executed until we arrived the desired line.
+    for (int lineno = 0; getline (file,str) && lineno < startLine; lineno++);
+
+    int lineCnt = 0;
+    while (getline(file, str))
+    {
+        stringstream stream(str);
+        int ts;
+        int x;
+        int y;
+        int polarity;
+        stream >> ts;
+        stream >> x;
+        stream >> y;
+        stream >> polarity;
+
+        // std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
+        uint64_t temp = 0;
+        temp = (x << 17) + (y << 2) + (polarity << 1) + 1;
+        *data++ = temp;
+
+        if(lineCnt >= event_num)
+        {
+            break;
+        }
+        lineCnt++;
+    }
+
+    data = begin;
+    return lineCnt;
+}
+
+
 void creatEventdata(int x_pos, int y_pos, int event_num, uint64_t *data)
 {
     int x = x_pos;
@@ -401,6 +443,7 @@ void creatEventdata_solid(int x_pos, int y_pos, int moveDirection, uint64_t *dat
 
 
 static int simulationEventSpeed = 0;
+static int currentStartLine = 0;
 
 
 int abmof(int port, int eventThreshold, int socketType)
@@ -439,7 +482,7 @@ int abmof(int port, int eventThreshold, int socketType)
 //		eventSlice = (outputDataElement_t *)sds_alloc(DVS_HEIGHT * DVS_WIDTH);
 //		return retSocket;
 //	}
-    int eventsArraySize = 121;
+    int eventsArraySize = 320;
     int eventPerSize = 8;
 
 	if(eventsArraySize >= eventThreshold)
@@ -462,9 +505,13 @@ int abmof(int port, int eventThreshold, int socketType)
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     int event_num = eventsArraySize;
-    creatEventdata(60+(simulationEventSpeed)%30 , 60, event_num, data);
+    eventsArraySize = creatEventdataFromFile(currentStartLine, event_num, data);
+    //creatEventdata(60+(simulationEventSpeed)%30 , 60, event_num, data);
     // creatEventdata_solid(60+(simulationEventSpeed)%30 , 60, 0, data);
     simulationEventSpeed = simulationEventSpeed + 2;
+
+    if (eventsArraySize < event_num) currentStartLine = 0;
+    else currentStartLine += event_num;
 
     parseEventsSW(data, eventsArraySize, eventSliceSW);
 

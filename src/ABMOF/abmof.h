@@ -13,6 +13,10 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <fstream>
+#include <sstream>
+#include <vector>
+
 struct SADResult {
 	uint16_t dx;
 	uint16_t dy;
