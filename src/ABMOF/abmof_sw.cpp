@@ -515,7 +515,7 @@ void testTempSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, int32_t *even
 }
 
 static uint16_t areaEventRegsSW[AREA_NUMBER][AREA_NUMBER];
-static float areaEventThrSW = 1000;
+static uint16_t areaEventThrSW = 60;
 static uint16_t OFRetRegsSW[2 * SEARCH_DISTANCE + 1][2 * SEARCH_DISTANCE + 1];
 
 
@@ -526,45 +526,48 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
         uint16_t OFRetHistCnt = OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)];
         OFRetHistCnt = OFRetHistCnt + 1;
         OFRetRegsSW[OFRet.range(2, 0)][OFRet.range(5, 3)] = OFRetHistCnt;
-
-        if(rotateFlg)
-        {
-            uint16_t countSum = 0;
-            uint16_t histCountSum = 0;
-            uint16_t radiusSum =  0;
-            uint16_t radiusCountSum =  0;
-
-            for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
-            {
-                for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
-                {
-                    uint16_t count = OFRetRegsSW[OFRetHistX+SEARCH_DISTANCE][OFRetHistY+SEARCH_DISTANCE];
-                    float radius = pow(OFRetHistX,  2) + pow(OFRetHistY,  2);
-                    countSum += count;
-                    radiusCountSum += radius * count;
-
-                    histCountSum += 1;
-                    radiusSum += radius;
-                }
-            }
-
-            if (countSum >= 10)
-            {
-                float avgMatchDistance = (float)radiusCountSum / countSum;
-                float avgTargetDistance = (float)radiusSum / histCountSum;
-
-                if(avgMatchDistance > avgTargetDistance )
-                {
-                    areaEventThrSW -= areaEventThrSW * 3/64;
-                }
-                else if (avgMatchDistance < avgTargetDistance)
-                {
-                    areaEventThrSW += areaEventThrSW *3/64;
-                }
-            }
-        }
-
     }
+
+	if(rotateFlg)
+	{
+		uint16_t countSum = 0;
+		uint16_t histCountSum = 0;
+		uint16_t radiusSum =  0;
+		uint16_t radiusCountSum =  0;
+
+		for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
+		{
+			for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
+			{
+				uint16_t count = OFRetRegsSW[OFRetHistX+SEARCH_DISTANCE][OFRetHistY+SEARCH_DISTANCE];
+				float radius = pow(OFRetHistX,  2) + pow(OFRetHistY,  2);
+				countSum += count;
+				radiusCountSum += radius * count;
+
+				histCountSum += 1;
+				radiusSum += radius;
+
+				OFRetRegsSW[OFRetHistX+SEARCH_DISTANCE][OFRetHistY+SEARCH_DISTANCE] = 0;
+			}
+		}
+
+		if (countSum >= 10)
+		{
+			float avgMatchDistance = (float)radiusCountSum / countSum;
+			float avgTargetDistance = (float)radiusSum / histCountSum;
+
+			if(avgMatchDistance > avgTargetDistance )
+			{
+				areaEventThrSW -= areaEventThrSW * 3/64;
+			}
+			else if (avgMatchDistance < avgTargetDistance)
+			{
+				areaEventThrSW += areaEventThrSW *3/64;
+			}
+		}
+	}
+
+
     *thrRet = areaEventThrSW;
 
 }
@@ -610,7 +613,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		ap_uint<6> OFRet;
 
         uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
-//        c = c + 1;
+        c = c + 1;
         areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
 
         apUint1_t rotateFlg = 0;
@@ -622,9 +625,9 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 //            idx = glPLActiveSliceIdxSW;
             rotateFlg = 1;
 
-            for(int r = 0; r < 1000; r++)
+            for(int r = 0; r < 1; r++)
             {
-                cout << "Rotated successfully!!!!" << endl;
+                cout << "Rotated successfully from SW!!!!" << endl;
                 cout << "x is: " << xWr << "\t y is: " << yWr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
             }
 
@@ -635,7 +638,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 //                {
 //                    if (slicesSW[glPLActiveSliceIdxSW][xAddr][yAddr/COMBINED_PIXELS] != 0)
 //                    {
-//                        for(int r = 0; r < 1000; r++)
+//                        for(int r = 0; r < 10; r++)
 //                        {
 //                            cout << "Ha! I caught you, the pixel which is not clear!" << endl;
 //                            cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
@@ -658,15 +661,6 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
                resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(glPLActiveSliceIdxSW + 3));
            }
 
-           // clearOFHistogram 
-           for(int8_t OFRetHistX = -SEARCH_DISTANCE; OFRetHistX <= SEARCH_DISTANCE; OFRetHistX++)
-           {
-               for(int8_t OFRetHistY = -SEARCH_DISTANCE; OFRetHistY <= SEARCH_DISTANCE; OFRetHistY++)
-               {
-                   OFRetRegsSW[OFRetHistX][OFRetHistY] = 0;
-               }
-           }
-
         }
 
 
@@ -682,15 +676,16 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 //				resetPix(i, 192, (sliceIdx_t)(idx + 3));
 //				resetPix(i, 224, (sliceIdx_t)(idx + 3));
 
-		for(int idx1 = 0; idx1 < BLOCK_SIZE; idx1++)
-		{
-			for(int idx2 = 0; idx2 < BLOCK_SIZE; idx2++)
-			{
-				localSumReg[idx1][idx2] = 0;
-			}
-		}
-		miniRetVal = 0x7fff;
-		minOFRet = ap_uint<6>(0xff);   // 0xff means the OF is invalid.
+		// We use stream to accumulate sum and obtain the minimum, so we don't need this global shift register.
+//		for(int idx1 = 0; idx1 < BLOCK_SIZE; idx1++)
+//		{
+//			for(int idx2 = 0; idx2 < 2*SEARCH_DISTANCE + 1; idx2++)
+//			{
+//				localSumReg[idx1][idx2] = 0;
+//			}
+//		}
+//		miniRetVal = 0x7fff;
+//		minOFRet = ap_uint<6>(0xff);   // 0xff means the OF is invalid.
 
 		// In software version, we initial miniSumTmp for every input, so we don't do it here.
 //		initMiniSumLoop : for(int8_t j = 0; j <= 2*SEARCH_DISTANCE; j++)
