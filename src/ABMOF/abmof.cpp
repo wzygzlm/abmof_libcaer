@@ -359,8 +359,8 @@ void creatEventdata_solid(int x_pos, int y_pos, uint64_t *data)
 {
     int x = x_pos;
     int y = y_pos;
-    int width = 1;
-    int lenth = 23;
+    int width = 2;
+    int lenth = 11;
     int polarity = 1;
     int bit = 1;
     uint64_t temp = 0;
@@ -382,6 +382,7 @@ void creatEventdata_solid(int x_pos, int y_pos, uint64_t *data)
 
 
 
+static int simulationEventSpeed = 0;
 
 
 int abmof(int port, int eventThreshold, int socketType)
@@ -444,9 +445,11 @@ int abmof(int port, int eventThreshold, int socketType)
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     int event_num = eventsArraySize;
     //creatEventdata((imgNum)%100 , 0, event_num, data);
-    creatEventdata_solid(50+(imgNum)%100 , 50, data);
+    creatEventdata_solid(50+(simulationEventSpeed)%100 , 50, data);
+    simulationEventSpeed = simulationEventSpeed + 2;
 
     parseEventsSW(data, eventsArraySize, eventSliceSW);
+
 //    displaySliceLocal(eventsArraySize);
 
 //    sw_ctr.stop();
