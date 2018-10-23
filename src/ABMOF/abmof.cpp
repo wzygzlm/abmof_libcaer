@@ -355,7 +355,7 @@ void creatEventdata(int x_pos, int y_pos, int event_num, uint64_t *data)
     data = begin;
 }
 
-void creatEventdata_solid(int x_pos, int y_pos, uint64_t *data)
+void creatEventdata_solid(int x_pos, int y_pos, int moveDirection, uint64_t *data)
 {
     int x = x_pos;
     int y = y_pos;
@@ -368,15 +368,33 @@ void creatEventdata_solid(int x_pos, int y_pos, uint64_t *data)
     begin = data;
     *data++ = 0;
 
-    for (int i = x; i <(x + width); i++)
+    // 0: positive direction of x axis 1 : positive direction of y axis
+    if (moveDirection >= 2) moveDirection = 0;
+
+    if (moveDirection == 0) 
     {
-        for (int j = y; j <(y + lenth); j++)
+
+        for (int i = x; i <(x + width); i++)
         {
-            temp = (i << 17)+(j << 2)+(polarity << 1) + 1;
-            *data++ = temp;
+            for (int j = y; j <(y + lenth); j++)
+            {
+                temp = (i << 17)+(j << 2)+(polarity << 1) + 1;
+                *data++ = temp;
+            }
+        }
+
+    }
+    else if(moveDirection == 1)
+    {
+        for (int i = y; i <(y + lenth); i++)
+        {
+            for (int j = x; j <(x + width); j++)
+            {
+                temp = (i << 17)+(j << 2)+(polarity << 1) + 1;
+                *data++ = temp;
+            }
         }
     }
-
     data = begin;
 }
 
@@ -445,7 +463,7 @@ int abmof(int port, int eventThreshold, int socketType)
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     int event_num = eventsArraySize;
     //creatEventdata((imgNum)%100 , 0, event_num, data);
-    creatEventdata_solid(50+(simulationEventSpeed)%100 , 50, data);
+    creatEventdata_solid(60+(simulationEventSpeed)%30 , 60, 0, data);
     simulationEventSpeed = simulationEventSpeed + 2;
 
     parseEventsSW(data, eventsArraySize, eventSliceSW);
