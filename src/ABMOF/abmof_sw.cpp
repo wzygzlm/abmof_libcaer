@@ -8,7 +8,7 @@ using namespace std;
 #include "abmof_hw_accel.h"
 #include "time.h"
 
-#define TEST_TIMES 10
+#define TEST_TIMES 20
 
 static col_pix_t slicesSW[SLICES_NUMBER][SLICE_WIDTH][SLICE_HEIGHT/COMBINED_PIXELS];
 static sliceIdx_t glPLActiveSliceIdxSW = 0;
@@ -81,19 +81,19 @@ void colSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 		pix_t in2[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 		int16_t out[2 * SEARCH_DISTANCE + 1])
 {
-	cout << "in1 is: " << endl;
-	for (int m = 0; m < BLOCK_SIZE + 2 * SEARCH_DISTANCE; m++)
-	{
-		cout << in1[m] << " ";
-	}
-	cout << endl;
-
-	cout << "in2 is: " << endl;
-	for (int m = 0; m < BLOCK_SIZE + 2 * SEARCH_DISTANCE; m++)
-	{
-		cout << in2[m] << " ";
-	}
-	cout << endl;
+//	cout << "in1 is: " << endl;
+//	for (int m = 0; m < BLOCK_SIZE + 2 * SEARCH_DISTANCE; m++)
+//	{
+//		cout << in1[m] << " ";
+//	}
+//	cout << endl;
+//
+//	cout << "in2 is: " << endl;
+//	for (int m = 0; m < BLOCK_SIZE + 2 * SEARCH_DISTANCE; m++)
+//	{
+//		cout << in2[m] << " ";
+//	}
+//	cout << endl;
 
 	for(int i = 0; i <= 2 * SEARCH_DISTANCE; i++)
 	{
@@ -176,13 +176,13 @@ void miniSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 		}
 	}
 
-	cout << "OF_x is: " << OFRet_x << "\t OF_y is: " << OFRet_y << endl;
+//	cout << "OF_x is: " << OFRet_x << "\t OF_y is: " << OFRet_y << endl;
 
 	*miniSumRet = miniRetVal;
 	*OFRet = minOFRet;
 
-	std::cout << "miniSumRetSW is: " << *miniSumRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
-	std::cout << std::dec;    // Restore dec mode
+//	std::cout << "miniSumRetSW is: " << *miniSumRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
+//	std::cout << std::dec;    // Restore dec mode
 }
 
 void blockSADSW(pix_t blockIn1[BLOCK_SIZE][BLOCK_SIZE], pix_t blockIn2[BLOCK_SIZE][BLOCK_SIZE], uint16_t *sumRet)
@@ -206,37 +206,27 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
     ap_uint<3> tmpOF_x = ap_uint<3>(7);
     ap_uint<3> tmpOF_y = ap_uint<3>(7);
 
-    cout << "Reference block is: " << endl;
-    for(uint8_t blockX = 0; blockX < BLOCK_SIZE; blockX++)
-    {
-        for(uint8_t blockY = 0; blockY < BLOCK_SIZE; blockY++)
-        {
-            cout << refBlock[blockX][blockY] << "\t";
-        }
-        cout << endl;
-    }
-    cout << endl;
-
-    cout << "target block is: " << endl;
-    for(uint8_t blockX = 0; blockX < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockX++)
-    {
-        for(uint8_t blockY = 0; blockY < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockY++)
-        {
-            cout << tagBlock[blockX][blockY] << "\t";
-        }
-        cout << endl;
-    }
-    cout << endl;
-
-    int block1ZeroCnt = 0;
-    // Remove some outliers
-    for(uint8_t i = 0; i < BLOCK_SIZE; i++)
-    {
-        for(uint8_t j = 0; j < BLOCK_SIZE; j++)
-        {
-            if (refBlock[i][j] == 0) block1ZeroCnt++;
-        }
-    }
+//    cout << "Reference block is: " << endl;
+//    for(uint8_t blockX = 0; blockX < BLOCK_SIZE; blockX++)
+//    {
+//        for(uint8_t blockY = 0; blockY < BLOCK_SIZE; blockY++)
+//        {
+//            cout << refBlock[blockX][blockY] << "\t";
+//        }
+//        cout << endl;
+//    }
+//    cout << endl;
+//
+//    cout << "target block is: " << endl;
+//    for(uint8_t blockX = 0; blockX < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockX++)
+//    {
+//        for(uint8_t blockY = 0; blockY < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockY++)
+//        {
+//            cout << tagBlock[blockX][blockY] << "\t";
+//        }
+//        cout << endl;
+//    }
+//    cout << endl;
 
     for(uint8_t xOffset = 0; xOffset < 2 * SEARCH_DISTANCE + 1; xOffset++)
     {
@@ -252,45 +242,15 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
                 }
             }
 
-            int block2ZeroCnt = 0;
-            // Remove some outliers
-            for(uint8_t i = 0; i < BLOCK_SIZE; i++)
-            {
-                for(uint8_t j = 0; j < BLOCK_SIZE; j++)
-                {
-                    if (tagBlockIn[i][j] == 0) block2ZeroCnt ++;
-                }
-            }
-
             blockSADSW(refBlock, tagBlockIn, &tmpBlockSum);
 
-            // Remove some outliers
-            if (block2ZeroCnt >= BLOCK_SIZE * (BLOCK_SIZE - 1))
-            {
-                tmpBlockSum = 0x7fff;
-            }
-
-            if(tmpBlockSum <= tmpSum)
+            if(tmpBlockSum < tmpSum)
             {
                 tmpSum = tmpBlockSum;
                 tmpOF_x = ap_uint<3>(xOffset);
                 tmpOF_y = ap_uint<3>(yOffset);
             }
         }
-    }
-
-    // Remove some outliers
-    if (block1ZeroCnt >= BLOCK_SIZE * (BLOCK_SIZE - 1))
-    {
-        tmpSum = 0x7fff;
-        tmpOF_y = 7;
-        tmpOF_x = 7;
-    }
-
-    if (tmpSum >= 0x1fff)
-    {
-        tmpOF_y = 7;
-        tmpOF_x = 7;
     }
 
     *miniRet = tmpSum;
@@ -515,7 +475,7 @@ void testTempSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, int32_t *even
 }
 
 static uint16_t areaEventRegsSW[AREA_NUMBER][AREA_NUMBER];
-static uint16_t areaEventThrSW = 60;
+static uint16_t areaEventThrSW = 500;
 static uint16_t OFRetRegsSW[2 * SEARCH_DISTANCE + 1][2 * SEARCH_DISTANCE + 1];
 
 
@@ -559,10 +519,21 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 			if(avgMatchDistance > avgTargetDistance )
 			{
 				areaEventThrSW -= areaEventThrSW * 3/64;
+				if (areaEventThrSW <= 100)
+				{
+					areaEventThrSW = 100;
+				}
+				std::cout << "AreaEventThr is decreased. New areaEventThr from SW is: " << areaEventThrSW << std::endl;
 			}
 			else if (avgMatchDistance < avgTargetDistance)
 			{
+
 				areaEventThrSW += areaEventThrSW *3/64;
+				if (areaEventThrSW >= 1000)
+				{
+					areaEventThrSW = 1000;
+				}
+				std::cout << "AreaEventThr is increased. New areaEventThr from SW is: " << areaEventThrSW << std::endl;
 			}
 		}
 	}
@@ -574,32 +545,10 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
 {
-	glPLActiveSliceIdxSW--;
-	sliceIdx_t idx = glPLActiveSliceIdxSW;
+//	glPLActiveSliceIdxSW--;
+//	sliceIdx_t idx = glPLActiveSliceIdxSW;
 
-    for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)
-    {
-        resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL) * COMBINED_PIXELS, (sliceIdx_t)(glPLActiveSliceIdxSW + 3));
-        resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(glPLActiveSliceIdxSW + 3));
-    }
-
-    // Check the accumulation slice is clear or not
-    for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
-    {
-        for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
-        {
-            if (slicesSW[glPLActiveSliceIdxSW][xAddr][yAddr/COMBINED_PIXELS] != 0)
-            {
-                for(int r = 0; r < 1000; r++)
-                {
-                    cout << "Ha! I caught you, the pixel which is not clear!" << endl;
-                    cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
-                }
-            }
-        }
-    }
-
-        cout << "Current Event packet's event number is: " << eventsArraySize << endl;
+//	cout << "Current Event packet's event number is: " << eventsArraySize << endl;
 	for(int32_t i = 0; i < eventsArraySize; i++)
 	{
 		uint64_t tmp = *dataStream++;
@@ -621,7 +570,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
         // The area threshold reached, rotate the slice index and clear the areaEventRegs.
         if (c > areaEventThrSW)
         {
-//            glPLActiveSliceIdxSW--;
+            glPLActiveSliceIdxSW--;
 //            idx = glPLActiveSliceIdxSW;
             rotateFlg = 1;
 
@@ -632,20 +581,20 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
             }
 
             // Check the accumulation slice is clear or not
-//            for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
-//            {
-//                for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
-//                {
-//                    if (slicesSW[glPLActiveSliceIdxSW][xAddr][yAddr/COMBINED_PIXELS] != 0)
-//                    {
-//                        for(int r = 0; r < 10; r++)
-//                        {
-//                            cout << "Ha! I caught you, the pixel which is not clear!" << endl;
-//                            cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
-//                        }
-//                    }
-//                }
-//            }
+            for(int32_t xAddr = 0; xAddr < SLICE_WIDTH; xAddr++)
+            {
+                for(int32_t yAddr = 0; yAddr < SLICE_HEIGHT; yAddr = yAddr + COMBINED_PIXELS)
+                {
+                    if (slicesSW[glPLActiveSliceIdxSW][xAddr][yAddr/COMBINED_PIXELS] != 0)
+                    {
+                        for(int r = 0; r < 10; r++)
+                        {
+                            cout << "Ha! I caught you, the pixel which is not clear!" << endl;
+                            cout << "x is: " << xAddr << "\t y is: " << yAddr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
+                        }
+                    }
+                }
+            }
 
             for(int areaX = 0; areaX < AREA_NUMBER; areaX++)
             {
@@ -720,6 +669,26 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 
         miniBlockSADSW(block1, block2, &miniRet, &OFRet);
 
+        // Remove outliers
+        int block1ZeroCnt = 0;
+        for(int8_t block1IdxX = 0; block1IdxX < BLOCK_SIZE; block1IdxX++)
+        {
+            for(int8_t block1IdxY = 0; block1IdxY < BLOCK_SIZE; block1IdxY++)
+            {
+                if(block1[block1IdxX][block1IdxY] == 0)
+                {
+                    block1ZeroCnt++;
+                }
+            }
+        }
+
+        if(block1ZeroCnt > BLOCK_SIZE * (BLOCK_SIZE - 1))
+        {
+            miniRet = 0x7fff;
+            OFRet = 0x3f;
+        }
+
+
 		apUint17_t tmp1 = apUint17_t(xWr.to_int() + (yWr.to_int() << 8) + (pol << 16));
 		ap_int<9> tmp2 = miniRet.range(8, 0);
 		apUint6_t tmpOF = OFRet;
@@ -727,7 +696,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		*eventSlice++ = output.to_int();
 
         /* -----------------Feedback part------------------------ */
-//		feedbackSW(miniRet, OFRet, rotateFlg, &areaEventThrSW);
+		feedbackSW(miniRet, OFRet, rotateFlg, &areaEventThrSW);
 	}
 
 	resetLoop: for (int16_t resetCnt = 0; resetCnt < 2048; resetCnt = resetCnt + 2)

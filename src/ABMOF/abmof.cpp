@@ -337,7 +337,7 @@ void sendEventSlice()
 
 int creatEventdataFromFile(int startLine, int event_num, uint64_t *data)
 {
-    ifstream file("jAER-events.txt");
+    ifstream file("box_trans-events.txt");
     string str; 
     vector<int> values;
     uint64_t *begin = 0;
@@ -358,6 +358,8 @@ int creatEventdataFromFile(int startLine, int event_num, uint64_t *data)
         stream >> x;
         stream >> y;
         stream >> polarity;
+
+        // y = DVS_HEIGHT - y;   // OpenCV and jaer has inverse y coordinate.
 
         // std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
         uint64_t temp = 0;
@@ -482,7 +484,7 @@ int abmof(int port, int eventThreshold, int socketType)
 //		eventSlice = (outputDataElement_t *)sds_alloc(DVS_HEIGHT * DVS_WIDTH);
 //		return retSocket;
 //	}
-    int eventsArraySize = 320;
+    int eventsArraySize = 1000;
     int eventPerSize = 8;
 
 	if(eventsArraySize >= eventThreshold)
