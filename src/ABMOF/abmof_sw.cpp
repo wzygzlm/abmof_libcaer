@@ -228,6 +228,16 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
     }
     cout << endl;
 
+    int block1ZeroCnt = 0;
+    // Remove some outliers
+    for(uint8_t i = 0; i < BLOCK_SIZE; i++)
+    {
+        for(uint8_t j = 0; j < BLOCK_SIZE; j++)
+        {
+            if (refBlock[i][j] == 0) block1ZeroCnt++;
+        }
+    }
+
     for(uint8_t xOffset = 0; xOffset < 2 * SEARCH_DISTANCE + 1; xOffset++)
     {
         for(uint8_t yOffset = 0; yOffset < 2 * SEARCH_DISTANCE + 1; yOffset++)
@@ -241,7 +251,24 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
                     tagBlockIn[i][j] = tagBlock[i + xOffset][j + yOffset];
                 }
             }
+
+            int block2ZeroCnt = 0;
+            // Remove some outliers
+            for(uint8_t i = 0; i < BLOCK_SIZE; i++)
+            {
+                for(uint8_t j = 0; j < BLOCK_SIZE; j++)
+                {
+                    if (tagBlockIn[i][j] == 0) block2ZeroCnt ++;
+                }
+            }
+
             blockSADSW(refBlock, tagBlockIn, &tmpBlockSum);
+
+            // Remove some outliers
+            if (block2ZeroCnt >= BLOCK_SIZE * (BLOCK_SIZE - 1))
+            {
+                tmpBlockSum = 0x7fff;
+            }
 
             if(tmpBlockSum <= tmpSum)
             {
@@ -251,6 +278,21 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
             }
         }
     }
+
+    // Remove some outliers
+    if (block1ZeroCnt >= BLOCK_SIZE * (BLOCK_SIZE - 1))
+    {
+        tmpSum = 0x7fff;
+        tmpOF_y = 7;
+        tmpOF_x = 7;
+    }
+
+    if (tmpSum >= 0x1fff)
+    {
+        tmpOF_y = 7;
+        tmpOF_x = 7;
+    }
+
     *miniRet = tmpSum;
     *OFRet = tmpOF_y.concat(tmpOF_x);
 	std::cout << "miniSumRetSW is: " << *miniRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
@@ -679,6 +721,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
                 block2[xOffset][yCopyOffset] = out2[yCopyOffset];
             }
 		}
+
 
         miniBlockSADSW(block1, block2, &miniRet, &OFRet);
 

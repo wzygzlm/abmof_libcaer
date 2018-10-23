@@ -338,8 +338,8 @@ void creatEventdata(int x_pos, int y_pos, int event_num, uint64_t *data)
 {
     int x = x_pos;
     int y = y_pos;
-    int width = 15;
-    int lenth = 72;
+    int width = 11;
+    int lenth = 11;
     int polarity = 1;
     int bit = 1;
     uint64_t temp = 0;
@@ -359,7 +359,7 @@ void creatEventdata_solid(int x_pos, int y_pos, int moveDirection, uint64_t *dat
 {
     int x = x_pos;
     int y = y_pos;
-    int width = 2;
+    int width = 11;
     int lenth = 11;
     int polarity = 1;
     int bit = 1;
@@ -439,7 +439,7 @@ int abmof(int port, int eventThreshold, int socketType)
 //		eventSlice = (outputDataElement_t *)sds_alloc(DVS_HEIGHT * DVS_WIDTH);
 //		return retSocket;
 //	}
-    int eventsArraySize = 24;
+    int eventsArraySize = 121;
     int eventPerSize = 8;
 
 	if(eventsArraySize >= eventThreshold)
@@ -462,8 +462,8 @@ int abmof(int port, int eventThreshold, int socketType)
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     int event_num = eventsArraySize;
-    //creatEventdata((imgNum)%100 , 0, event_num, data);
-    creatEventdata_solid(60+(simulationEventSpeed)%30 , 60, 0, data);
+    creatEventdata(60+(simulationEventSpeed)%30 , 60, event_num, data);
+    // creatEventdata_solid(60+(simulationEventSpeed)%30 , 60, 0, data);
     simulationEventSpeed = simulationEventSpeed + 2;
 
     parseEventsSW(data, eventsArraySize, eventSliceSW);
