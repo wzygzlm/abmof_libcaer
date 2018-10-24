@@ -347,6 +347,7 @@ int creatEventdataFromFile(int startLine, int event_num, uint64_t *data)
     for (int lineno = 0; getline (file,str) && lineno < startLine; lineno++);
 
     int lineCnt = 0;
+    std::cout << "Start reading line: " << startLine << std::endl; 
     while (getline(file, str))
     {
         stringstream stream(str);
@@ -359,9 +360,11 @@ int creatEventdataFromFile(int startLine, int event_num, uint64_t *data)
         stream >> y;
         stream >> polarity;
 
-        // y = DVS_HEIGHT - y;   // OpenCV and jaer has inverse y coordinate.
+        y = DVS_HEIGHT -1 - y;   // OpenCV and jaer has inverse y coordinate.
 
-        // std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
+        if( y >= DVS_HEIGHT || y < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
+        if( x >= DVS_WIDTH || x < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
+
         uint64_t temp = 0;
         temp = (x << 17) + (y << 2) + (polarity << 1) + 1;
         *data++ = temp;

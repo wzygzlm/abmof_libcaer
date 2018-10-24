@@ -1,7 +1,3 @@
-# jAER DAVIS/DVS camera text file output
-# created Tue Oct 23 22:33:22 CEST 2018
-# source-file: E:\DVS\databases\BodoRuckauerDVSOpticalFlowData\real samples\IMU_translBoxes.aedat
-# dvs-events: One event per line:  timestamp(us) x y polarity(0=off,1=on)
 297036769 202 90 0
 297036773 231 83 0
 297036789 230 114 0

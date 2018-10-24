@@ -255,8 +255,8 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
 
     *miniRet = tmpSum;
     *OFRet = tmpOF_y.concat(tmpOF_x);
-	std::cout << "miniSumRetSW is: " << *miniRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
-	std::cout << std::dec;    // Restore dec mode
+//	std::cout << "miniSumRetSW is: " << *miniRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
+//	std::cout << std::dec;    // Restore dec mode
 }
 
 
@@ -475,7 +475,7 @@ void testTempSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, int32_t *even
 }
 
 static uint16_t areaEventRegsSW[AREA_NUMBER][AREA_NUMBER];
-static uint16_t areaEventThrSW = 500;
+static uint16_t areaEventThrSW = 300;
 static uint16_t OFRetRegsSW[2 * SEARCH_DISTANCE + 1][2 * SEARCH_DISTANCE + 1];
 
 
@@ -518,7 +518,7 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 
 			if(avgMatchDistance > avgTargetDistance )
 			{
-				areaEventThrSW -= areaEventThrSW * 3/64;
+//				areaEventThrSW -= areaEventThrSW * 3/64;
 				if (areaEventThrSW <= 100)
 				{
 					areaEventThrSW = 100;
@@ -528,7 +528,7 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 			else if (avgMatchDistance < avgTargetDistance)
 			{
 
-				areaEventThrSW += areaEventThrSW *3/64;
+//				areaEventThrSW += areaEventThrSW *3/64;
 				if (areaEventThrSW >= 1000)
 				{
 					areaEventThrSW = 1000;
