@@ -27,8 +27,7 @@ static bool initSocketFlg = false;
 static uint16_t retSocket;
 
 // static outputDataElement_t *eventSlice = (outputDataElement_t *)sds_alloc(DVS_HEIGHT * DVS_WIDTH);
-static int32_t eventSliceSW[DVS_HEIGHT * DVS_WIDTH];
-
+static int32_t eventSliceSW[DVS_HEIGHT * DVS_WIDTH]; 
 // To trigger the tcp to send event slice
 static bool sendFlg = true;
 
@@ -335,9 +334,9 @@ void sendEventSlice()
 //}
 
 
-int creatEventdataFromFile(int startLine, int event_num, uint64_t *data)
+int creatEventdataFromFile(string filename, int startLine, int event_num, uint64_t *data)
 {
-    ifstream file("box_trans-events.txt");
+    ifstream file(filename);
     string str; 
     vector<int> values;
     uint64_t *begin = 0;
@@ -451,7 +450,7 @@ static int simulationEventSpeed = 0;
 static int currentStartLine = 0;
 
 
-int abmof(int port, int eventThreshold, int socketType)
+int abmof(int port, int eventThreshold, int socketType, string filename)
 {
 	if (!initSocketFlg)
 	{
@@ -510,7 +509,7 @@ int abmof(int port, int eventThreshold, int socketType)
 //    sw_ctr.start();
     memset((char *) eventSliceSW, 0, DVS_HEIGHT * DVS_WIDTH);
     int event_num = eventsArraySize;
-    eventsArraySize = creatEventdataFromFile(currentStartLine, event_num, data);
+    eventsArraySize = creatEventdataFromFile(filename, currentStartLine, event_num, data);
     //creatEventdata(60+(simulationEventSpeed)%30 , 60, event_num, data);
     // creatEventdata_solid(60+(simulationEventSpeed)%30 , 60, 0, data);
     simulationEventSpeed = simulationEventSpeed + 2;

@@ -240,6 +240,8 @@ int main(int argc, char *argv[]){
 	/************** libcaer part ***********************/
 
     int socketPort = 4097, eventThreshold = 50000, packetInterval = 10000, socketType = 0;  // Default value
+    string filename = "box_trans-events.txt";
+
     if (argc == 2) socketPort = atoi(argv[1]);
     if (argc == 3)
     {
@@ -258,6 +260,14 @@ int main(int argc, char *argv[]){
     	eventThreshold = atoi(argv[2]);
     	packetInterval = atoi(argv[3]);
     	socketType = atoi(argv[4]);
+    }
+    if (argc == 6)
+    {
+    	socketPort = atoi(argv[1]);
+    	eventThreshold = atoi(argv[2]);
+    	packetInterval = atoi(argv[3]);
+    	socketType = atoi(argv[4]);
+        filename = argv[5];
     }
     int remoteSocket;
 
@@ -324,7 +334,7 @@ int main(int argc, char *argv[]){
 
 	while (!globalShutdown.load(memory_order_relaxed)) {
 
-        remoteSocket = abmof(socketPort, eventThreshold, socketType);
+        remoteSocket = abmof(socketPort, eventThreshold, socketType, filename);
 
 //		std::unique_ptr<libcaer::events::EventPacketContainer> packetContainer = davisHandle.dataGet();
 //		if (packetContainer == nullptr) {

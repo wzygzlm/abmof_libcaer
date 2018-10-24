@@ -24,7 +24,7 @@ struct SADResult {
 	uint64_t sadValue;
 };
 
-int abmof(int port, int eventThreshold, int socketType);
+int abmof(int port, int eventThreshold, int socketType, std::string filename);
 
 int init_socket(int port);
 void abmof_accel(int16_t x, int16_t y, bool pol, int64_t ts);
