@@ -23,7 +23,8 @@ void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 	int8_t yNewIdx = y%COMBINED_PIXELS;
 //	cout << "Data before write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 	pix_t tmp = slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx);
-	tmp += 1;
+    if (tmp >= 7) tmp =7;
+    else tmp += 1;
 	slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) = tmp;
 //	cout << "Data after write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 }
@@ -188,45 +189,70 @@ void miniSADSumSW(pix_t in1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
 void blockSADSW(pix_t blockIn1[BLOCK_SIZE][BLOCK_SIZE], pix_t blockIn2[BLOCK_SIZE][BLOCK_SIZE], uint16_t *sumRet)
 {
     uint16_t tmpSum = 0;
+    uint16_t validPixRefBlockCnt = 0, validPixTagBlockCnt = 0, nonZeroMatchCnt = 0;
     for(uint8_t i = 0; i < BLOCK_SIZE; i++)
     {
         for(uint8_t j = 0; j < BLOCK_SIZE; j++)
         {
             tmpSum += abs(blockIn1[i][j] - blockIn2[i][j]);
+
+            if (blockIn1[i][j] != 0)
+            {
+                validPixRefBlockCnt++;
+            }
+            if (blockIn2[i][j] != 0)
+            {
+                validPixTagBlockCnt++;
+            }
+            if (blockIn1[i][j] != 0 && blockIn2[i][j] != 0)
+            {
+                nonZeroMatchCnt++;
+            }
         }
     }
+
+    // Remove outliers
+    int minValidPixNum = 0.02 * (BLOCK_SIZE * BLOCK_SIZE); 
+    if (validPixRefBlockCnt < minValidPixNum || validPixTagBlockCnt < minValidPixNum || nonZeroMatchCnt < minValidPixNum)
+    {
+        tmpSum = 0x7fff;
+    }
+
     *sumRet = tmpSum;
 }
 
 void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
-        pix_t tagBlock[BLOCK_SIZE + 2 * SEARCH_DISTANCE][BLOCK_SIZE + 2 * SEARCH_DISTANCE],
+        pix_t tagBlock[BLOCK_SIZE + 2 * SEARCH_DISTANCE][BLOCK_SIZE + 2 * SEARCH_DISTANCE], bool printBlocksEnable,
         ap_int<16> *miniRet, ap_uint<6> *OFRet)
 {
     uint16_t tmpSum = 0x7fff;
     ap_uint<3> tmpOF_x = ap_uint<3>(7);
     ap_uint<3> tmpOF_y = ap_uint<3>(7);
 
-//    cout << "Reference block is: " << endl;
-//    for(uint8_t blockX = 0; blockX < BLOCK_SIZE; blockX++)
-//    {
-//        for(uint8_t blockY = 0; blockY < BLOCK_SIZE; blockY++)
-//        {
-//            cout << refBlock[blockX][blockY] << "\t";
-//        }
-//        cout << endl;
-//    }
-//    cout << endl;
-//
-//    cout << "target block is: " << endl;
-//    for(uint8_t blockX = 0; blockX < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockX++)
-//    {
-//        for(uint8_t blockY = 0; blockY < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockY++)
-//        {
-//            cout << tagBlock[blockX][blockY] << "\t";
-//        }
-//        cout << endl;
-//    }
-//    cout << endl;
+    if(printBlocksEnable == true)
+    {
+        cout << "Reference block is: " << endl;
+        for(uint8_t blockX = 0; blockX < BLOCK_SIZE; blockX++)
+        {
+            for(uint8_t blockY = 0; blockY < BLOCK_SIZE; blockY++)
+            {
+                cout << refBlock[blockX][blockY] << "\t";
+            }
+            cout << endl;
+        }
+        cout << endl;
+
+        cout << "target block is: " << endl;
+        for(uint8_t blockX = 0; blockX < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockX++)
+        {
+            for(uint8_t blockY = 0; blockY < BLOCK_SIZE + 2 * SEARCH_DISTANCE; blockY++)
+            {
+                cout << tagBlock[blockX][blockY] << "\t";
+            }
+            cout << endl;
+        }
+        cout << endl;
+    }
 
     for(uint8_t xOffset = 0; xOffset < 2 * SEARCH_DISTANCE + 1; xOffset++)
     {
@@ -253,6 +279,12 @@ void miniBlockSADSW(pix_t refBlock[BLOCK_SIZE][BLOCK_SIZE],
         }
     }
 
+    if(tmpSum == 0x7fff)
+    {
+        tmpOF_x = 7;
+        tmpOF_y = 7;
+    }
+    
     *miniRet = tmpSum;
     *OFRet = tmpOF_y.concat(tmpOF_x);
 //	std::cout << "miniSumRetSW is: " << *miniRet << "\t OFRetSW is: " << std::hex << *OFRet << std::endl;
@@ -543,11 +575,14 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 
 }
 
+apUint1_t rotateFlg = 0;
+
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
 {
 //	glPLActiveSliceIdxSW--;
 //	sliceIdx_t idx = glPLActiveSliceIdxSW;
 
+    int tmpDebug = 0;
 //	cout << "Current Event packet's event number is: " << eventsArraySize << endl;
 	for(int32_t i = 0; i < eventsArraySize; i++)
 	{
@@ -558,21 +593,26 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		bool pol  = ((tmp) >> POLARITY_SHIFT) & POLARITY_MASK;
 		int64_t ts = tmp >> 32;
 
+        /* These two values are only for debug and test */
+        ap_uint<3> OFGT_x = (tmp >> 26);
+        ap_uint<3> OFGT_y = (tmp >> 29);
+        ap_uint<6> OFGT = OFGT_y.concat(OFGT_x);
+
 		ap_int<16> miniRet;
 		ap_uint<6> OFRet;
 
-        uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
-        c = c + 1;
-        areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
-
-        apUint1_t rotateFlg = 0;
+        if(xWr == 80 && yWr == 57)
+        {
+            tmpDebug++;
+            cout << "tmpDebug is : " << tmpDebug << endl;
+        }
 
         // The area threshold reached, rotate the slice index and clear the areaEventRegs.
-        if (c > areaEventThrSW)
+        if (rotateFlg == 1)
         {
             glPLActiveSliceIdxSW--;
 //            idx = glPLActiveSliceIdxSW;
-            rotateFlg = 1;
+            rotateFlg = 0;
 
             for(int r = 0; r < 1; r++)
             {
@@ -610,6 +650,15 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
                resetPixSW(resetCnt/PIXS_PER_COL, (resetCnt % PIXS_PER_COL + 1) * COMBINED_PIXELS, (sliceIdx_t)(glPLActiveSliceIdxSW + 3));
            }
 
+        }
+
+        uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
+        c = c + 1;
+        areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
+
+        if(c >= areaEventThrSW)
+        {
+            rotateFlg = 1;
         }
 
 
@@ -666,28 +715,41 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
             }
 		}
 
+        bool printBlocksEnable = false;
+        miniBlockSADSW(block1, block2, printBlocksEnable, &miniRet, &OFRet);
 
-        miniBlockSADSW(block1, block2, &miniRet, &OFRet);
+//        // Remove outliers
+//        int block1ZeroCnt = 0;
+//        for(int8_t block1IdxX = 0; block1IdxX < BLOCK_SIZE; block1IdxX++)
+//        {
+//            for(int8_t block1IdxY = 0; block1IdxY < BLOCK_SIZE; block1IdxY++)
+//            {
+//                if(block1[block1IdxX][block1IdxY] == 0)
+//                {
+//                    block1ZeroCnt++;
+//                }
+//            }
+//        }
+//
+//        if(block1ZeroCnt > BLOCK_SIZE * (BLOCK_SIZE - 1))
+//        {
+//            miniRet = 0x7fff;
+//            OFRet = 0x3f;
+//        }
 
-        // Remove outliers
-        int block1ZeroCnt = 0;
-        for(int8_t block1IdxX = 0; block1IdxX < BLOCK_SIZE; block1IdxX++)
+        // check result, only check valid result
+        if(OFRet != 0x3f)
         {
-            for(int8_t block1IdxY = 0; block1IdxY < BLOCK_SIZE; block1IdxY++)
+            if(!(xWr - BLOCK_SIZE/2 - SEARCH_DISTANCE < 0 || xWr + BLOCK_SIZE/2 + SEARCH_DISTANCE >= DVS_WIDTH
+                   || yWr - BLOCK_SIZE/2 - SEARCH_DISTANCE < 0 || yWr + BLOCK_SIZE/2 + SEARCH_DISTANCE >= DVS_HEIGHT))
             {
-                if(block1[block1IdxX][block1IdxY] == 0)
+                if(OFRet != OFGT)
                 {
-                    block1ZeroCnt++;
+                    cout << "Found error at index: " << i << endl;
+                    cout << "x is:  " << xWr << "\t y is: " << yWr << "\t ts is: " << ts << endl;
                 }
             }
         }
-
-        if(block1ZeroCnt > BLOCK_SIZE * (BLOCK_SIZE - 1))
-        {
-            miniRet = 0x7fff;
-            OFRet = 0x3f;
-        }
-
 
 		apUint17_t tmp1 = apUint17_t(xWr.to_int() + (yWr.to_int() << 8) + (pol << 16));
 		ap_int<9> tmp2 = miniRet.range(8, 0);

@@ -350,22 +350,26 @@ int creatEventdataFromFile(string filename, int startLine, int event_num, uint64
     while (getline(file, str))
     {
         stringstream stream(str);
-        int ts;
+        uint64_t ts;
         int x;
         int y;
         int polarity;
+        int OF_x;
+        int OF_y;
         stream >> ts;
         stream >> x;
         stream >> y;
         stream >> polarity;
+        stream >> OF_x;
+        stream >> OF_y;
 
-        y = DVS_HEIGHT -1 - y;   // OpenCV and jaer has inverse y coordinate.
+        // y = DVS_HEIGHT -1 - y;   // OpenCV and jaer has inverse y coordinate.
 
         if( y >= DVS_HEIGHT || y < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
         if( x >= DVS_WIDTH || x < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
 
         uint64_t temp = 0;
-        temp = (x << 17) + (y << 2) + (polarity << 1) + 1;
+        temp = (ts << 32) + ((3 - OF_y) << 29) + ((3 - OF_x) << 26) + (x << 17) + (y << 2) + (polarity << 1) + 1;
         *data++ = temp;
 
         if(lineCnt >= event_num)
@@ -486,7 +490,7 @@ int abmof(int port, int eventThreshold, int socketType, string filename)
 //		eventSlice = (outputDataElement_t *)sds_alloc(DVS_HEIGHT * DVS_WIDTH);
 //		return retSocket;
 //	}
-    int eventsArraySize = 1000;
+    int eventsArraySize = 3000;
     int eventPerSize = 8;
 
 	if(eventsArraySize >= eventThreshold)
