@@ -575,7 +575,6 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 
 }
 
-apUint1_t rotateFlg = 0;
 
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
 {
@@ -607,12 +606,17 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
             cout << "tmpDebug is : " << tmpDebug << endl;
         }
 
+        uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
+        c = c + 1;
+        areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
+
+        apUint1_t rotateFlg = 0;
         // The area threshold reached, rotate the slice index and clear the areaEventRegs.
-        if (rotateFlg == 1)
+        if(c >= areaEventThrSW)
         {
             glPLActiveSliceIdxSW--;
 //            idx = glPLActiveSliceIdxSW;
-            rotateFlg = 0;
+            rotateFlg = 1;
 
             for(int r = 0; r < 1; r++)
             {
@@ -651,16 +655,6 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
            }
 
         }
-
-        uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
-        c = c + 1;
-        areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE] = c;
-
-        if(c >= areaEventThrSW)
-        {
-            rotateFlg = 1;
-        }
-
 
 		writePixSW(xWr, yWr, glPLActiveSliceIdxSW);
 
