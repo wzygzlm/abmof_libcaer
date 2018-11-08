@@ -23,7 +23,7 @@ void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 	int8_t yNewIdx = y%COMBINED_PIXELS;
 //	cout << "Data before write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 	pix_t tmp = slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx);
-    if (tmp >= 7) tmp =7;
+    if (tmp >= (ap_uint< BITS_PER_PIXEL - 1 >(0xff))) tmp = (ap_uint< BITS_PER_PIXEL - 1 >(0xff));
     else tmp += 1;
 	slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) = tmp;
 //	cout << "Data after write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
@@ -216,8 +216,7 @@ void blockSADSW(pix_t blockIn1[BLOCK_SIZE][BLOCK_SIZE], pix_t blockIn2[BLOCK_SIZ
     if (validPixRefBlockCnt < minValidPixNum || validPixTagBlockCnt < minValidPixNum || nonZeroMatchCnt < minValidPixNum)
     {
         tmpSum = 0x7fff;
-    }
-
+    } 
     *sumRet = tmpSum;
 }
 
@@ -507,7 +506,7 @@ void testTempSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, int32_t *even
 }
 
 static uint16_t areaEventRegsSW[AREA_NUMBER][AREA_NUMBER];
-static uint16_t areaEventThrSW = 300;
+static uint16_t areaEventThrSW = 1000;
 static uint16_t OFRetRegsSW[2 * SEARCH_DISTANCE + 1][2 * SEARCH_DISTANCE + 1];
 
 
@@ -581,7 +580,6 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 //	glPLActiveSliceIdxSW--;
 //	sliceIdx_t idx = glPLActiveSliceIdxSW;
 
-    int tmpDebug = 0;
 //	cout << "Current Event packet's event number is: " << eventsArraySize << endl;
 	for(int32_t i = 0; i < eventsArraySize; i++)
 	{
@@ -599,12 +597,6 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 
 		ap_int<16> miniRet;
 		ap_uint<6> OFRet;
-
-        if(xWr == 80 && yWr == 57)
-        {
-            tmpDebug++;
-            cout << "tmpDebug is : " << tmpDebug << endl;
-        }
 
         uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
         c = c + 1;
