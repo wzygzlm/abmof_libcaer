@@ -575,6 +575,7 @@ static void feedbackSW(apUint15_t miniSumRet, apUint6_t OFRet, apUint1_t rotateF
 }
 
 
+uint32_t currentTs = 0, lastTs = 0;
 void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *eventSlice)
 {
 //	glPLActiveSliceIdxSW--;
@@ -588,7 +589,7 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		xWr = ((tmp) >> POLARITY_X_ADDR_SHIFT) & POLARITY_X_ADDR_MASK;
 		yWr = ((tmp) >> POLARITY_Y_ADDR_SHIFT) & POLARITY_Y_ADDR_MASK;
 		bool pol  = ((tmp) >> POLARITY_SHIFT) & POLARITY_MASK;
-		int64_t ts = tmp >> 32;
+		uint64_t ts = tmp >> 32;
 
         /* These two values are only for debug and test */
         ap_uint<3> OFGT_x = (tmp >> 26);
@@ -610,10 +611,14 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 //            idx = glPLActiveSliceIdxSW;
             rotateFlg = 1;
 
+            lastTs = currentTs;
+            currentTs = ts;
+
             for(int r = 0; r < 1; r++)
             {
                 cout << "Rotated successfully from SW!!!!" << endl;
                 cout << "x is: " << xWr << "\t y is: " << yWr << "\t idx is: " << glPLActiveSliceIdxSW << endl;
+                cout << "delataTs is: " << ((currentTs - lastTs) >> 9) << endl;
             }
 
             // Check the accumulation slice is clear or not
@@ -739,8 +744,9 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 
 		apUint17_t tmp1 = apUint17_t(xWr.to_int() + (yWr.to_int() << 8) + (pol << 16));
 		ap_int<9> tmp2 = miniRet.range(8, 0);
+        ap_uint<9> delataTs = ((currentTs - lastTs) >> 9); 
 		apUint6_t tmpOF = OFRet;
-		ap_uint<32> output = (tmp2, (tmpOF, tmp1));
+		ap_uint<32> output = (delataTs, (tmpOF, tmp1));
 		*eventSlice++ = output.to_int();
 
         /* -----------------Feedback part------------------------ */
