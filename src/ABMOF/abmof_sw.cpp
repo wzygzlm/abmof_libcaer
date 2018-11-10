@@ -11,15 +11,20 @@ using namespace std;
 #define TEST_TIMES 20
 
 static col_pix_t slicesSW[SLICES_NUMBER][SLICE_WIDTH][SLICE_HEIGHT/COMBINED_PIXELS];
+static col_pix_t slicesScale1SW[SLICES_NUMBER][SLICE_WIDTH/2][SLICE_HEIGHT/COMBINED_PIXELS/2];
+static col_pix_t slicesScale2SW[SLICES_NUMBER][SLICE_WIDTH/4][SLICE_HEIGHT/COMBINED_PIXELS/4];
 static sliceIdx_t glPLActiveSliceIdxSW = 0;
 
 void resetPixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 {
 	slicesSW[sliceIdx][x][y/COMBINED_PIXELS] = 0;
+	slicesScale1SW[sliceIdx][x/2][y/COMBINED_PIXELS/2] = 0;
+	slicesScale2SW[sliceIdx][x/4][y/COMBINED_PIXELS/4] = 0;
 }
 
 void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
 {
+    // write scale 0
 	int8_t yNewIdx = y%COMBINED_PIXELS;
 //	cout << "Data before write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
 	pix_t tmp = slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx);
@@ -27,10 +32,34 @@ void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
     else tmp += 1;
 	slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) = tmp;
 //	cout << "Data after write : " << slicesSW[sliceIdx][x][y/COMBINED_PIXELS].range(4 * yNewIdx + 3, 4 * yNewIdx) << endl;
+
+    // write scale 1
+    ap_uint<8> xScale1 = x/2;
+    ap_uint<8> yScale1 = y/2;
+	int8_t yNewIdxScale1 = (y/2)%COMBINED_PIXELS;
+//	cout << "Data before write : " << slicesScale1SW[sliceIdx][xScale1][yScale1/COMBINED_PIXELS].range(4 * yNewIdxScale1 + 3, 4 * yNewIdxScale1) << endl;
+	pix_t tmpScale1 = slicesScale1SW[sliceIdx][xScale1][yScale1/COMBINED_PIXELS].range(4 * yNewIdxScale1 + 3, 4 * yNewIdxScale1);
+    if (tmpScale1 >= (ap_uint< BITS_PER_PIXEL - 1 >(0xff))) tmpScale1 = (ap_uint< BITS_PER_PIXEL - 1 >(0xff));
+    else tmpScale1 += 1;
+	slicesScale1SW[sliceIdx][xScale1][yScale1/COMBINED_PIXELS].range(4 * yNewIdxScale1 + 3, 4 * yNewIdxScale1) = tmpScale1;
+//	cout << "Data after write : " << slicesScale1SW[sliceIdx][xScale1][yScale1/COMBINED_PIXELS].range(4 * yNewIdxScale1 + 3, 4 * yNewIdxScale1) << endl;
+
+    // write scale 2
+    ap_uint<8> xScale2 = x/4;
+    ap_uint<8> yScale2 = y/4;
+	int8_t yNewIdxScale2 = (y/4)%COMBINED_PIXELS;
+//	cout << "Data before write : " << slicesScale2SW[sliceIdx][xScale2][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2) << endl;
+	pix_t tmpScale2 = slicesScale2SW[sliceIdx][xScale2][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2);
+    if (tmpScale2 >= (ap_uint< BITS_PER_PIXEL - 1 >(0xff))) tmpScale2 = (ap_uint< BITS_PER_PIXEL - 1 >(0xff));
+    else tmpScale2 += 1;
+	slicesScale2SW[sliceIdx][xScale1][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2) = tmpScale2;
+//	cout << "Data after write : " << slicesScale2SW[sliceIdx][xScale2][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2) << endl;
 }
 
 void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceIdx_t sliceIdxTag,
-		pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
+		pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
+		pix_t refColScale1[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagColScale1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
+		pix_t refColScale2[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagColScale2[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
 {
 
 	two_cols_pix_t refColData;
@@ -66,15 +95,94 @@ void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceId
         tagColData = (slicesSW[(sliceIdx_t)(sliceIdxTag + 0)][x][y/COMBINED_PIXELS], slicesSW[(sliceIdx_t)(sliceIdxTag + 0)][x][neighboryOffset]);
     }
 
+	two_cols_pix_t refColDataScale1;
+    two_cols_pix_t tagColDataScale1;
+    ap_uint<3> neighboryOffsetScale1;
+    ap_uint<8> xScale1 = x/2;
+    ap_uint<8> yScale1 = y/2;
+    if ( yScale1%COMBINED_PIXELS < BLOCK_SIZE/2 + SEARCH_DISTANCE )
+    {
+        neighboryOffsetScale1 = yScale1/COMBINED_PIXELS - 1;
+        // concatenate two columns together
+        refColDataScale1 = (slicesScale1SW[sliceIdxRef][xScale1][yScale1/COMBINED_PIXELS], slicesScale1SW[sliceIdxRef][xScale1][neighboryOffsetScale1]); 
+        //	cout << "refColDataScale1: " << refColDataScale1 << endl; 
+        // concatenate two columns together
+        // Use explicit cast here, otherwise it will generate a lot of select operations which consumes more LUTs than MUXs.
+        tagColDataScale1 = (slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][yScale1/COMBINED_PIXELS], slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][neighboryOffsetScale1]);
+    }
+    else if ( yScale1%COMBINED_PIXELS >  COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE - 1 )
+    {
+        neighboryOffsetScale1 = yScale1/COMBINED_PIXELS + 1;
+        // concatenate two columns together
+        refColDataScale1 = (slicesScale1SW[sliceIdxRef][xScale1][yScale1/COMBINED_PIXELS], slicesScale1SW[sliceIdxRef][xScale1][neighboryOffsetScale1]); 
+        //	cout << "refColDataScale1: " << refColDataScale1 << endl; 
+        // concatenate two columns together
+        // Use explicit cast here, otherwise it will generate a lot of select operations which consumes more LUTs than MUXs.
+        tagColDataScale1 = (slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][yScale1/COMBINED_PIXELS], slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][neighboryOffsetScale1]);
+    }
+    else
+    {
+        neighboryOffsetScale1 = yScale1/COMBINED_PIXELS + 0;
+        refColDataScale1 = (slicesScale1SW[sliceIdxRef][xScale1][yScale1/COMBINED_PIXELS], slicesScale1SW[sliceIdxRef][xScale1][neighboryOffsetScale1]); 
+        //	cout << "refColDataScale1: " << refColDataScale1 << endl; 
+        // concatenate two columns together
+        // Use explicit cast here, otherwise it will generate a lot of select operations which consumes more LUTs than MUXs.
+        tagColDataScale1 = (slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][yScale1/COMBINED_PIXELS], slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][neighboryOffsetScale1]);
+    }
+
+	two_cols_pix_t refColDataScale2;
+    two_cols_pix_t tagColDataScale2;
+    ap_uint<3> neighboryOffsetScale2;
+    ap_uint<8> xScale2 = x/4;
+    ap_uint<8> yScale2 = y/4;
+    if ( yScale2%COMBINED_PIXELS < BLOCK_SIZE/2 + SEARCH_DISTANCE )
+    {
+        neighboryOffsetScale2 = yScale2/COMBINED_PIXELS - 1;
+        // concatenate two columns together
+        refColDataScale2 = (slicesScale2SW[sliceIdxRef][xScale2][yScale2/COMBINED_PIXELS], slicesScale2SW[sliceIdxRef][xScale2][neighboryOffsetScale2]); 
+        //	cout << "refColDataScale2: " << refColDataScale2 << endl; 
+        // concatenate two columns together
+        // Use explicit cast here, otherwise it will generate a lot of select operations which consumes more LUTs than MUXs.
+        tagColDataScale2 = (slicesScale2SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale2][yScale2/COMBINED_PIXELS], slicesScale2SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale2][neighboryOffsetScale2]);
+    }
+    else if ( yScale2%COMBINED_PIXELS >  COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE - 1 )
+    {
+        neighboryOffsetScale2 = yScale2/COMBINED_PIXELS + 1;
+        // concatenate two columns together
+        refColDataScale2 = (slicesScale2SW[sliceIdxRef][xScale2][yScale2/COMBINED_PIXELS], slicesScale2SW[sliceIdxRef][xScale2][neighboryOffsetScale2]); 
+        //	cout << "refColDataScale2: " << refColDataScale2 << endl; 
+        // concatenate two columns together
+        // Use explicit cast here, otherwise it will generate a lot of select operations which consumes more LUTs than MUXs.
+        tagColDataScale2 = (slicesScale2SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale2][yScale2/COMBINED_PIXELS], slicesScale2SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale2][neighboryOffsetScale2]);
+    }
+    else
+    {
+        neighboryOffsetScale2 = yScale2/COMBINED_PIXELS + 0;
+        refColDataScale2 = (slicesScale2SW[sliceIdxRef][xScale2][yScale2/COMBINED_PIXELS], slicesScale2SW[sliceIdxRef][xScale2][neighboryOffsetScale2]); 
+        //	cout << "refColDataScale2: " << refColDataScale2 << endl; 
+        // concatenate two columns together
+        // Use explicit cast here, otherwise it will generate a lot of select operations which consumes more LUTs than MUXs.
+        tagColDataScale2 = (slicesScale2SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale2][yScale2/COMBINED_PIXELS], slicesScale2SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale2][neighboryOffsetScale2]);
+    }
 
 	// find the bottom pixel of the column that centered on y.
 	ap_uint<6> yColOffsetIdx = y%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
+	ap_uint<6> yColOffsetIdxScale1 = yScale1%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
+	ap_uint<6> yColOffsetIdxScale2 = yScale2%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
 
 	readRefLoop: for(ap_uint<8> i = 0; i < BLOCK_SIZE + 2 * SEARCH_DISTANCE; i++)
 	{
 		refCol[i] = refColData.range(yColOffsetIdx * 4 + 3, yColOffsetIdx * 4);
 		tagCol[i] = tagColData.range(yColOffsetIdx * 4 + 3, yColOffsetIdx * 4);
 		yColOffsetIdx++;
+
+		refColScale1[i] = refColDataScale1.range(yColOffsetIdxScale1 * 4 + 3, yColOffsetIdxScale1 * 4);
+		tagColScale1[i] = tagColDataScale1.range(yColOffsetIdxScale1 * 4 + 3, yColOffsetIdxScale1 * 4);
+		yColOffsetIdxScale1++;
+
+		refColScale2[i] = refColDataScale2.range(yColOffsetIdxScale2 * 4 + 3, yColOffsetIdxScale2 * 4);
+		tagColScale2[i] = tagColDataScale2.range(yColOffsetIdxScale2 * 4 + 3, yColOffsetIdxScale2 * 4);
+		yColOffsetIdxScale2++;
 	}
 }
 
@@ -336,12 +444,12 @@ void testMiniSADSumWrapperSW(apIntBlockCol_t *input1, apIntBlockCol_t *input2, i
 	}
 }
 
-void testSingleRwslicesSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t idx, pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
-{
-	writePixSW(x, y, idx);
-	readBlockColsSW(x, y, idx + 1, idx + 2, refCol, tagCol);
-	resetPixSW(x, y, idx + 3);
-}
+//void testSingleRwslicesSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t idx, pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
+//{
+//	writePixSW(x, y, idx);
+//	readBlockColsSW(x, y, idx + 1, idx + 2, refCol, tagCol);
+//	resetPixSW(x, y, idx + 3);
+//}
 
 void testRwslicesSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, apIntBlockCol_t *refData, apIntBlockCol_t *tagData)
 {
@@ -375,14 +483,22 @@ void testRwslicesSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, apIntBloc
 
 		for(int8_t xOffSet = 0; xOffSet < BLOCK_SIZE + 2 * SEARCH_DISTANCE; xOffSet++)
 		{
-			pix_t out1[BLOCK_SIZE + 2 * SEARCH_DISTANCE];
-			pix_t out2[BLOCK_SIZE + 2 * SEARCH_DISTANCE];
+            pix_t out1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+
+            pix_t out1Scale1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2Scale1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+
+            pix_t out1Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
 
 //				resetPix(xRd + xOffSet, yRd , (sliceIdx_t)(idx + 3));
 
 //			resetPix(xRd + xOffSet, 1 , (sliceIdx_t)(idx + 3));
 
-			readBlockColsSW(xWr + xOffSet, yWr , idx + 1, idx + 2, out1, out2);
+			readBlockColsSW(xWr + xOffSet, yWr , idx + 1, idx + 2, 
+                    out1, out2, out1Scale1, out2Scale1, out1Scale2, out2Scale2);
+
 
 			apIntBlockCol_t refBlockCol;
 			apIntBlockCol_t tagBlockCol;
@@ -455,14 +571,22 @@ void testTempSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, int32_t *even
 
 		for(int8_t xOffSet = 0; xOffSet < BLOCK_SIZE + 2 * SEARCH_DISTANCE; xOffSet++)
 		{
-			pix_t out1[BLOCK_SIZE + 2 * SEARCH_DISTANCE];
-			pix_t out2[BLOCK_SIZE + 2 * SEARCH_DISTANCE];
+            pix_t out1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+
+            pix_t out1Scale1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2Scale1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+
+            pix_t out1Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
 
 //				resetPix(xRd + xOffSet, yRd , (sliceIdx_t)(idx + 3));
 
 //			resetPix(xRd + xOffSet, 1 , (sliceIdx_t)(idx + 3));
 
-			readBlockColsSW(xWr + xOffSet, yWr , idx + 1, idx + 2, out1, out2);
+			readBlockColsSW(xWr + xOffSet, yWr , idx + 1, idx + 2, 
+                    out1, out2, out1Scale1, out2Scale1, out1Scale2, out2Scale2);
+
 
 			apIntBlockCol_t refBlockCol;
 			apIntBlockCol_t tagBlockCol;
@@ -685,24 +809,41 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
         pix_t block1[BLOCK_SIZE][BLOCK_SIZE];
         pix_t block2[BLOCK_SIZE + 2 * SEARCH_DISTANCE][BLOCK_SIZE + 2 * SEARCH_DISTANCE];
 
+        pix_t block1Scale1[BLOCK_SIZE][BLOCK_SIZE];
+        pix_t block2Scale1[BLOCK_SIZE + 2 * SEARCH_DISTANCE][BLOCK_SIZE + 2 * SEARCH_DISTANCE];
+
+        pix_t block1Scale2[BLOCK_SIZE][BLOCK_SIZE];
+        pix_t block2Scale2[BLOCK_SIZE + 2 * SEARCH_DISTANCE][BLOCK_SIZE + 2 * SEARCH_DISTANCE];
+
 		for(int8_t xOffset = 0; xOffset < BLOCK_SIZE + 2 * SEARCH_DISTANCE; xOffset++)
         {
             pix_t out1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
             pix_t out2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
 
-			readBlockColsSW(xWr - BLOCK_SIZE/2 - SEARCH_DISTANCE + xOffset, yWr , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), out1, out2);
+            pix_t out1Scale1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2Scale1[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+
+            pix_t out1Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+            pix_t out2Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
+
+			readBlockColsSW(xWr - BLOCK_SIZE/2 - SEARCH_DISTANCE + xOffset, yWr , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), 
+                    out1, out2, out1Scale1, out2Scale1, out1Scale2, out2Scale2);
 
             for(int8_t yCopyOffset = 0; yCopyOffset < BLOCK_SIZE; yCopyOffset++)
             {
                 if (xOffset >= SEARCH_DISTANCE && xOffset < BLOCK_SIZE + SEARCH_DISTANCE)
                 {
                     block1[xOffset - SEARCH_DISTANCE][yCopyOffset] = out1[yCopyOffset + SEARCH_DISTANCE];
+                    block1Scale1[xOffset - SEARCH_DISTANCE][yCopyOffset] = out1Scale1[yCopyOffset + SEARCH_DISTANCE];
+                    block1Scale2[xOffset - SEARCH_DISTANCE][yCopyOffset] = out1Scale2[yCopyOffset + SEARCH_DISTANCE];
                 }
             }
 
             for(int8_t yCopyOffset = 0; yCopyOffset < BLOCK_SIZE + 2 * SEARCH_DISTANCE; yCopyOffset++)
             {
                 block2[xOffset][yCopyOffset] = out2[yCopyOffset];
+                block2Scale1[xOffset][yCopyOffset] = out2Scale1[yCopyOffset];
+                block2Scale2[xOffset][yCopyOffset] = out2Scale2[yCopyOffset];
             }
 		}
 
