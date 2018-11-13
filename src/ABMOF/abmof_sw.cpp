@@ -36,7 +36,7 @@ void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
     // write scale 1
     ap_uint<8> xScale1 = x/2;
     ap_uint<8> yScale1 = y/2;
-	int8_t yNewIdxScale1 = (y/2)%COMBINED_PIXELS;
+	int8_t yNewIdxScale1 = yScale1%COMBINED_PIXELS;
 //	cout << "Data before write : " << slicesScale1SW[sliceIdx][xScale1][yScale1/COMBINED_PIXELS].range(4 * yNewIdxScale1 + 3, 4 * yNewIdxScale1) << endl;
 	pix_t tmpScale1 = slicesScale1SW[sliceIdx][xScale1][yScale1/COMBINED_PIXELS].range(4 * yNewIdxScale1 + 3, 4 * yNewIdxScale1);
     if (tmpScale1 >= (ap_uint< BITS_PER_PIXEL - 1 >(0xff))) tmpScale1 = (ap_uint< BITS_PER_PIXEL - 1 >(0xff));
@@ -47,19 +47,17 @@ void writePixSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdx)
     // write scale 2
     ap_uint<8> xScale2 = x/4;
     ap_uint<8> yScale2 = y/4;
-	int8_t yNewIdxScale2 = (y/4)%COMBINED_PIXELS;
+	int8_t yNewIdxScale2 = yScale2%COMBINED_PIXELS;
 //	cout << "Data before write : " << slicesScale2SW[sliceIdx][xScale2][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2) << endl;
 	pix_t tmpScale2 = slicesScale2SW[sliceIdx][xScale2][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2);
     if (tmpScale2 >= (ap_uint< BITS_PER_PIXEL - 1 >(0xff))) tmpScale2 = (ap_uint< BITS_PER_PIXEL - 1 >(0xff));
     else tmpScale2 += 1;
-	slicesScale2SW[sliceIdx][xScale1][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2) = tmpScale2;
+	slicesScale2SW[sliceIdx][xScale2][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2) = tmpScale2;
 //	cout << "Data after write : " << slicesScale2SW[sliceIdx][xScale2][yScale2/COMBINED_PIXELS].range(4 * yNewIdxScale2 + 3, 4 * yNewIdxScale2) << endl;
 }
 
-void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceIdx_t sliceIdxTag,
-		pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
-		pix_t refColScale1[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagColScale1[BLOCK_SIZE + 2 * SEARCH_DISTANCE],
-		pix_t refColScale2[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagColScale2[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
+void readBlockColsSWScale0(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceIdx_t sliceIdxTag,
+		pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
 {
 
 	two_cols_pix_t refColData;
@@ -95,11 +93,26 @@ void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceId
         tagColData = (slicesSW[(sliceIdx_t)(sliceIdxTag + 0)][x][y/COMBINED_PIXELS], slicesSW[(sliceIdx_t)(sliceIdxTag + 0)][x][neighboryOffset]);
     }
 
+
+	// find the bottom pixel of the column that centered on y.
+	ap_uint<6> yColOffsetIdx = y%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
+
+	readRefLoop: for(ap_uint<8> i = 0; i < BLOCK_SIZE + 2 * SEARCH_DISTANCE; i++)
+	{
+		refCol[i] = refColData.range(yColOffsetIdx * 4 + 3, yColOffsetIdx * 4);
+		tagCol[i] = tagColData.range(yColOffsetIdx * 4 + 3, yColOffsetIdx * 4);
+		yColOffsetIdx++;
+	}
+}
+
+void readBlockColsSWScale1(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceIdx_t sliceIdxTag,
+		pix_t refColScale1[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagColScale1[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
+{
 	two_cols_pix_t refColDataScale1;
     two_cols_pix_t tagColDataScale1;
     ap_uint<3> neighboryOffsetScale1;
-    ap_uint<8> xScale1 = x/2;
-    ap_uint<8> yScale1 = y/2;
+    ap_uint<8> xScale1 = x;
+    ap_uint<8> yScale1 = y;
     if ( yScale1%COMBINED_PIXELS < BLOCK_SIZE/2 + SEARCH_DISTANCE )
     {
         neighboryOffsetScale1 = yScale1/COMBINED_PIXELS - 1;
@@ -130,11 +143,25 @@ void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceId
         tagColDataScale1 = (slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][yScale1/COMBINED_PIXELS], slicesScale1SW[(sliceIdx_t)(sliceIdxTag + 0)][xScale1][neighboryOffsetScale1]);
     }
 
+	// find the bottom pixel of the column that centered on y.
+	ap_uint<6> yColOffsetIdxScale1 = yScale1%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
+
+	readRefLoop: for(ap_uint<8> i = 0; i < BLOCK_SIZE + 2 * SEARCH_DISTANCE; i++)
+	{
+		refColScale1[i] = refColDataScale1.range(yColOffsetIdxScale1 * 4 + 3, yColOffsetIdxScale1 * 4);
+		tagColScale1[i] = tagColDataScale1.range(yColOffsetIdxScale1 * 4 + 3, yColOffsetIdxScale1 * 4);
+		yColOffsetIdxScale1++;
+	}
+}
+
+void readBlockColsSWScale2(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceIdx_t sliceIdxTag,
+		pix_t refColScale2[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagColScale2[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
+{
 	two_cols_pix_t refColDataScale2;
     two_cols_pix_t tagColDataScale2;
     ap_uint<3> neighboryOffsetScale2;
-    ap_uint<8> xScale2 = x/4;
-    ap_uint<8> yScale2 = y/4;
+    ap_uint<8> xScale2 = x;
+    ap_uint<8> yScale2 = y;
     if ( yScale2%COMBINED_PIXELS < BLOCK_SIZE/2 + SEARCH_DISTANCE )
     {
         neighboryOffsetScale2 = yScale2/COMBINED_PIXELS - 1;
@@ -166,20 +193,10 @@ void readBlockColsSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t sliceIdxRef, sliceId
     }
 
 	// find the bottom pixel of the column that centered on y.
-	ap_uint<6> yColOffsetIdx = y%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
-	ap_uint<6> yColOffsetIdxScale1 = yScale1%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
 	ap_uint<6> yColOffsetIdxScale2 = yScale2%COMBINED_PIXELS - BLOCK_SIZE/2 - SEARCH_DISTANCE + COMBINED_PIXELS;
 
 	readRefLoop: for(ap_uint<8> i = 0; i < BLOCK_SIZE + 2 * SEARCH_DISTANCE; i++)
 	{
-		refCol[i] = refColData.range(yColOffsetIdx * 4 + 3, yColOffsetIdx * 4);
-		tagCol[i] = tagColData.range(yColOffsetIdx * 4 + 3, yColOffsetIdx * 4);
-		yColOffsetIdx++;
-
-		refColScale1[i] = refColDataScale1.range(yColOffsetIdxScale1 * 4 + 3, yColOffsetIdxScale1 * 4);
-		tagColScale1[i] = tagColDataScale1.range(yColOffsetIdxScale1 * 4 + 3, yColOffsetIdxScale1 * 4);
-		yColOffsetIdxScale1++;
-
 		refColScale2[i] = refColDataScale2.range(yColOffsetIdxScale2 * 4 + 3, yColOffsetIdxScale2 * 4);
 		tagColScale2[i] = tagColDataScale2.range(yColOffsetIdxScale2 * 4 + 3, yColOffsetIdxScale2 * 4);
 		yColOffsetIdxScale2++;
@@ -444,12 +461,12 @@ void testMiniSADSumWrapperSW(apIntBlockCol_t *input1, apIntBlockCol_t *input2, i
 	}
 }
 
-//void testSingleRwslicesSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t idx, pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
-//{
-//	writePixSW(x, y, idx);
-//	readBlockColsSW(x, y, idx + 1, idx + 2, refCol, tagCol);
-//	resetPixSW(x, y, idx + 3);
-//}
+void testSingleRwslicesSW(ap_uint<8> x, ap_uint<8> y, sliceIdx_t idx, pix_t refCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE], pix_t tagCol[BLOCK_SIZE + 2 * SEARCH_DISTANCE])
+{
+	writePixSW(x, y, idx);
+	readBlockColsSWScale0(x, y, idx + 1, idx + 2, refCol, tagCol);
+	resetPixSW(x, y, idx + 3);
+}
 
 void testRwslicesSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, apIntBlockCol_t *refData, apIntBlockCol_t *tagData)
 {
@@ -496,8 +513,7 @@ void testRwslicesSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, apIntBloc
 
 //			resetPix(xRd + xOffSet, 1 , (sliceIdx_t)(idx + 3));
 
-			readBlockColsSW(xWr + xOffSet, yWr , idx + 1, idx + 2, 
-                    out1, out2, out1Scale1, out2Scale1, out1Scale2, out2Scale2);
+			readBlockColsSWScale0(xWr + xOffSet, yWr , idx + 1, idx + 2, out1, out2);
 
 
 			apIntBlockCol_t refBlockCol;
@@ -584,8 +600,7 @@ void testTempSW(uint64_t * data, sliceIdx_t idx, int16_t eventCnt, int32_t *even
 
 //			resetPix(xRd + xOffSet, 1 , (sliceIdx_t)(idx + 3));
 
-			readBlockColsSW(xWr + xOffSet, yWr , idx + 1, idx + 2, 
-                    out1, out2, out1Scale1, out2Scale1, out1Scale2, out2Scale2);
+			readBlockColsSWScale0(xWr + xOffSet, yWr , idx + 1, idx + 2, out1, out2);
 
 
 			apIntBlockCol_t refBlockCol;
@@ -716,12 +731,20 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		uint64_t ts = tmp >> 32;
 
         /* These two values are only for debug and test */
+        ap_uint<2> OFGT_scale = (tmp >> 14);
         ap_uint<3> OFGT_x = (tmp >> 26);
         ap_uint<3> OFGT_y = (tmp >> 29);
         ap_uint<6> OFGT = OFGT_y.concat(OFGT_x);
 
 		ap_int<16> miniRet;
 		ap_uint<6> OFRet;
+		ap_uint<2> scaleRet;
+		ap_int<16> miniRetScale0;
+		ap_uint<6> OFRetScale0;
+		ap_int<16> miniRetScale1;
+		ap_uint<6> OFRetScale1;
+		ap_int<16> miniRetScale2;
+		ap_uint<6> OFRetScale2;
 
         uint16_t c = areaEventRegsSW[xWr/AREA_SIZE][yWr/AREA_SIZE];
         c = c + 1;
@@ -826,8 +849,9 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
             pix_t out1Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
             pix_t out2Scale2[BLOCK_SIZE+ 2 * SEARCH_DISTANCE];
 
-			readBlockColsSW(xWr - BLOCK_SIZE/2 - SEARCH_DISTANCE + xOffset, yWr , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), 
-                    out1, out2, out1Scale1, out2Scale1, out1Scale2, out2Scale2);
+			readBlockColsSWScale0(xWr - BLOCK_SIZE/2 - SEARCH_DISTANCE + xOffset, yWr , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), out1, out2);
+			readBlockColsSWScale1(xWr/2 - BLOCK_SIZE/2 - SEARCH_DISTANCE + xOffset, yWr/2 , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), out1Scale1, out2Scale1);
+			readBlockColsSWScale2(xWr/4 - BLOCK_SIZE/2 - SEARCH_DISTANCE + xOffset, yWr/4 , (glPLActiveSliceIdxSW + 1), (glPLActiveSliceIdxSW + 2), out1Scale2, out2Scale2);
 
             for(int8_t yCopyOffset = 0; yCopyOffset < BLOCK_SIZE; yCopyOffset++)
             {
@@ -848,8 +872,27 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
 		}
 
         bool printBlocksEnable = false;
-        miniBlockSADSW(block1, block2, printBlocksEnable, &miniRet, &OFRet);
+        miniBlockSADSW(block1Scale2, block2Scale2, printBlocksEnable, &miniRetScale2, &OFRetScale2);
+        miniBlockSADSW(block1Scale1, block2Scale1, printBlocksEnable, &miniRetScale1, &OFRetScale1);
+        miniBlockSADSW(block1, block2, printBlocksEnable, &miniRetScale0, &OFRetScale0);
 
+        if(OFRetScale0 != 0x3f) miniRetScale0 = (miniRetScale0 << 4);
+        if(OFRetScale1 != 0x3f) miniRetScale1 = (miniRetScale1 << 2);
+        miniRet = miniRetScale2;
+        OFRet = OFRetScale2; 
+        scaleRet = 2;
+        if(miniRetScale1 < miniRet)
+        {
+            miniRet = miniRetScale1;
+            OFRet = OFRetScale1;
+            scaleRet = 1;
+        }
+        if(miniRetScale0 < miniRet)
+        {
+            miniRet = miniRetScale0;
+            OFRet = OFRetScale0;
+            scaleRet = 0;
+        }
 //        // Remove outliers
 //        int block1ZeroCnt = 0;
 //        for(int8_t block1IdxX = 0; block1IdxX < BLOCK_SIZE; block1IdxX++)
@@ -872,10 +915,10 @@ void parseEventsSW(uint64_t * dataStream, int32_t eventsArraySize, int32_t *even
         // check result, only check valid result
         if(OFRet != 0x3f)
         {
-            if(!(xWr - BLOCK_SIZE/2 - SEARCH_DISTANCE < 0 || xWr + BLOCK_SIZE/2 + SEARCH_DISTANCE >= DVS_WIDTH
-                   || yWr - BLOCK_SIZE/2 - SEARCH_DISTANCE < 0 || yWr + BLOCK_SIZE/2 + SEARCH_DISTANCE >= DVS_HEIGHT))
+            if(!(xWr/4 - BLOCK_SIZE/2 - SEARCH_DISTANCE < 0 || xWr/4 + BLOCK_SIZE/2 + SEARCH_DISTANCE >= DVS_WIDTH/4
+                   || yWr/4 - BLOCK_SIZE/2 - SEARCH_DISTANCE < 0 || yWr/4 + BLOCK_SIZE/2 + SEARCH_DISTANCE >= DVS_HEIGHT/4))
             {
-                if(OFRet != OFGT)
+                if(OFRet != OFGT || scaleRet != OFGT_scale)
                 {
                     cout << "Found error at index: " << i << endl;
                     cout << "x is:  " << xWr << "\t y is: " << yWr << "\t ts is: " << ts << endl;

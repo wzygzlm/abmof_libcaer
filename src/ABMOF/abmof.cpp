@@ -356,12 +356,16 @@ int creatEventdataFromFile(string filename, int startLine, int event_num, uint64
         int polarity;
         int OF_x;
         int OF_y;
+        int OF_scale;
         stream >> ts;
         stream >> x;
         stream >> y;
         stream >> polarity;
         stream >> OF_x;
         stream >> OF_y;
+        stream >> OF_scale;
+        OF_x = (OF_x >> OF_scale);
+        OF_y = (OF_y >> OF_scale);
 
         // y = DVS_HEIGHT -1 - y;   // OpenCV and jaer has inverse y coordinate.
 
@@ -369,7 +373,7 @@ int creatEventdataFromFile(string filename, int startLine, int event_num, uint64
         if( x >= DVS_WIDTH || x < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
 
         uint64_t temp = 0;
-        temp = (ts << 32) + ((3 - OF_y) << 29) + ((3 - OF_x) << 26) + (x << 17) + (y << 2) + (polarity << 1) + 1;
+        temp = (ts << 32) + ((3 - OF_y) << 29) + ((3 - OF_x) << 26) + (x << 17) + (OF_scale << 14) + (y << 2) + (polarity << 1) + 1;
         *data++ = temp;
 
         if(lineCnt >= event_num)
