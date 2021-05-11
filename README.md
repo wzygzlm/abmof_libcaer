@@ -1,2 +1,2 @@
 # abmof_libcaer
-A C++ version abmof based on libcaer.
+A C++ version ABMOF based on libcaer.
