@@ -3,7 +3,7 @@ A C++ version ABMOF based on libcaer.
 
 Tested on:
 
-OSX 11.2.3
+Ubuntu 18.04
 libcaer: 3.3.10
 opencv: 3.2.0
 
