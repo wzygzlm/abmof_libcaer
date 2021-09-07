@@ -32,7 +32,7 @@ sudo ./abmof_libcaer eventSample.txt
 Then, a file containing optical flow vectors will be originated with the name `OF_eventSample.txt`. Its outputs appears as follows:
 
 | **TIMESTAMP** | **X** | **Y**	| **Vx** | **Vy** | **Norm** |
-|:-------------:|:-----:|:-----:||:-----:|:-----:|:-----:|
+|:-------------:|:-----:|:-----:|:------:|:------:|:--------:|
 |1000000	|100	|256	|2	|5	|5.39	|
 |1000521	|53	|12	|-1	|1	|1.41	|
 |1001028	|243	|118	|7	|-2	|7.28	|
