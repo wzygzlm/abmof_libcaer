@@ -5,11 +5,13 @@
 // only used in SDx environment
 // #include "xf_headers.h"
 // #include "xf_dense_npyr_optical_flow_config.h"
-
+#include "ap_axi_sdata.h"
 
 // standard opencv, used in standard opencv environment
 #include "opencv2/opencv.hpp"
 #include <vector>
+#include <fstream>
+#include <iomanip>
 using namespace cv;
 
 #include <math.h>
@@ -28,6 +30,7 @@ static uint16_t retSocket;
 
 // static outputDataElement_t *eventSlice = (outputDataElement_t *)sds_alloc(DVS_HEIGHT * DVS_WIDTH);
 static int32_t eventSliceSW[DVS_HEIGHT * DVS_WIDTH]; 
+static ap_uint<32> custDataOut[DVS_HEIGHT * DVS_WIDTH];
 // To trigger the tcp to send event slice
 static bool sendFlg = true;
 
@@ -291,11 +294,11 @@ void sendEventSlice()
 
 //void displaySliceLocal(int32_t eventsArraySize)
 //{
-//    Mat img, img_color; int key; 
+//    cv::Mat img, img_color; int key; 
 //    img = Mat::ones(180 , 240, CV_8UC1)*127;    
-//
-//    cvtColor(img, img_color, COLOR_GRAY2BGR);
-//
+
+//    cv::cvtColor(img, img_color, COLOR_GRAY2BGR);
+
 //    for(int bufIndex = 4; bufIndex  < eventsArraySize; bufIndex = bufIndex + 4)
 //    {
 //        uchar x = eventSliceSW[bufIndex];
@@ -303,15 +306,15 @@ void sendEventSlice()
 //        uchar pol = eventSliceSW[bufIndex + 2] & 0x01; // The last bit of the third bytes is polarity.
 //        char OF_x = (eventSliceSW[bufIndex + 2] & 0x0e) - 3;
 //        char OF_y = ((eventSliceSW[bufIndex + 2] & 0x70) >> 4) - 3;
-//
+
 //        // Only print once
 //        if (bufIndex == 40) printf("OF_x is  %d, OF_y is %d.\n", OF_x, OF_y);
-//
+
 //        Point startPt = Point(x, y);
 //        Point endPt = Point(x + OF_x, y + OF_y);
-//
+
 //        //g            if(OF_x != -3 && OF_y != -3) cv::arrowedLine(img_color, startPt, endPt, (0, 0, 255), 1);
-//
+
 //        if(pol == 1)
 //        {
 //            img_color.at<Vec3b>(y, x)[0] = 255;
@@ -324,11 +327,11 @@ void sendEventSlice()
 //            img_color.at<Vec3b>(y, x)[1] = 0;
 //            img_color.at<Vec3b>(y, x)[2] = 0;
 //        }
-//
+
 //    }
-//
+
 //    cv::imshow("Event slice Client", img_color); 
-//
+
 //    // if (key = cv::waitKey(10) >= 0) break;
 //    if (key = cv::waitKey(10) >= 0);
 //}
@@ -354,6 +357,7 @@ int creatEventdataFromFile(string filename, int startLine, int event_num, uint64
         int x;
         int y;
         int polarity;
+        ap_uint<1> SFASTCorner;
         int OF_x;
         int OF_y;
         int OF_scale;
@@ -361,19 +365,24 @@ int creatEventdataFromFile(string filename, int startLine, int event_num, uint64
         stream >> x;
         stream >> y;
         stream >> polarity;
+//        stream >> SFASTCorner;
         stream >> OF_x;
         stream >> OF_y;
         stream >> OF_scale;
         OF_x = (OF_x >> OF_scale);
         OF_y = (OF_y >> OF_scale);
+//	std:cout << ts << ", " << x << ", " << y << ", " << polarity << ", " << OF_x << ", " << OF_y << ", " << OF_scale << endl;
 
         // y = DVS_HEIGHT -1 - y;   // OpenCV and jaer has inverse y coordinate.
 
-        if( y >= DVS_HEIGHT || y < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
-        if( x >= DVS_WIDTH || x < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl; 
+//        if( y >= DVS_HEIGHT || y < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl;
+//        if( x >= DVS_WIDTH || x < 0 )  std::cout << "ts is :" << ts << "\t x is: " << x << "\t y is :" << y << "\t pol is:" << polarity << std::endl;
+
+        if (y > DVS_HEIGHT || x > DVS_WIDTH) continue;
 
         uint64_t temp = 0;
-        temp = (ts << 32) + ((3 - OF_y) << 29) + ((3 - OF_x) << 26) + (x << 17) + (OF_scale << 14) + (y << 2) + (polarity << 1) + 1;
+//        temp = (ts << 32) + ((3 - OF_y) << 29) + ((3 - OF_x) << 26) + (x << 12) + (OF_scale << 14) + (y << 22) + (polarity << 11) + 1;
+        temp = (uint64_t)(ts << 32) + (uint64_t)(x << POLARITY_X_ADDR_SHIFT) + (uint64_t)(y << POLARITY_Y_ADDR_SHIFT) + (polarity << POLARITY_SHIFT) + 1;
         *data++ = temp;
 
         if(lineCnt >= event_num)
@@ -460,19 +469,20 @@ static int currentStartLine = 0;
 
 int abmof(int port, int eventThreshold, int socketType, string filename)
 {
-	if (!initSocketFlg)
-	{
-		if (socketType == 0)     //0 : UDP
-		{
-			retSocket = init_socket_UDP(port);
-		}
-		else
-		{
-			retSocket = init_socket_TCP(port);
-		}
-		initSocketFlg = true;
-	}
+//	if (!initSocketFlg)
+//	{
+//		if (socketType == 0)     //0 : UDP
+//		{
+//			retSocket = init_socket_UDP(port);
+//		}
+//		else
+//		{
+//			retSocket = init_socket_TCP(port);
+//		}
+//		initSocketFlg = true;
+//	}
 
+	int retSocket = 3;
 	// resetSlices();   // Clear slices before a new packet come in
 
 	imgNum++;
@@ -525,8 +535,10 @@ int abmof(int port, int eventThreshold, int socketType, string filename)
     if (eventsArraySize < event_num) currentStartLine = 0;
     else currentStartLine += event_num;
 
-    parseEventsSW(data, eventsArraySize, eventSliceSW);
+//    ap_uint<32> *custDataOut;
+    memset((ap_uint<32> *) custDataOut, 0, DVS_HEIGHT * DVS_WIDTH);
 
+    parseEventsSW(data, eventsArraySize, eventSliceSW, custDataOut);
 //    displaySliceLocal(eventsArraySize);
 
 //    sw_ctr.stop();
@@ -556,6 +568,55 @@ int abmof(int port, int eventThreshold, int socketType, string filename)
 //    sds_free(data);
 	sendEventSlice();
 
+//	for(int bufIndex = 4; bufIndex  < eventsArraySize; bufIndex = bufIndex + 4)
+//	{
+//		uint64_t tmp = *data++;
+//		uint64_t ts = tmp >> 32;
+//		uchar x = eventSliceSW[bufIndex];
+//		uchar y = eventSliceSW[bufIndex + 1];
+//		uchar pol = eventSliceSW[bufIndex + 2] & 0x01; // The last bit of the third bytes is polarity.
+////                char OF_x = 3 - ((eventSliceSW[bufIndex + 2] & 0x0e) >> 1);
+////                char OF_y = 3 - ((eventSliceSW[bufIndex + 2] & 0x70) >> 4);
+//                char OF_x = 3;
+//                char OF_y = 3;
+		
+        for (int j = 0; j < eventsArraySize; j++)
+        {
+                uint64_t tmp = *data++;
+                uint64_t ts = tmp >> 32;
+
+                ap_uint<32> tmpData = eventSliceSW[j];
+                ap_uint<10> y = tmpData.range(19, 10);          //range(25 ,16)
+                ap_uint<10> x = tmpData.range(9, 0);           //range(10, 1)
+
+//                cout << x << "\t" << y << endl;
+
+                ap_uint<1> rotateFlgSW = custDataOut[j].bit(23);
+
+                ap_uint<2> scaleRetSW = custDataOut[j].range(17, 16);
+
+                if(scaleRetSW != 0 || (x == 0 && y == 0)) continue;
+
+                ap_int<8> xOFRetSW = custDataOut[j].range(7, 0);
+                ap_int<8> yOFRetSW = custDataOut[j].range(15, 8);
+
+                int OF_x = xOFRetSW;
+                int OF_y = yOFRetSW;
+
+                ap_uint<1> rotateFlgHW;
+                ap_int<8> xOFRetHW;
+                ap_int<8> yOFRetHW;
+
+                FILE * fp;
+                char str[80];
+                strcpy(str, "OF_");
+                fp = fopen (strcat(str, filename.c_str()), "a");
+                fprintf(fp, "%u %i %i %.2f %.2f %.2f\n", ts, (int)x, (int)y, (float)-OF_x, (float)-OF_y, sqrt(((float)OF_x*(float)OF_x) + ((float)OF_y*(float)OF_y)));
+
+                fclose(fp);
+//		printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n", (float)ts, (float)x, (float)y, (float)OF_x, (float)OF_y, sqrt(((float)OF_x*(float)OF_x) + ((float)OF_y*(float)OF_y)));
+        }
+
 //	int i = 0;
 //	for (auto &tmpEvent : *polarityPkt)
 //	{
@@ -570,6 +631,6 @@ int abmof(int port, int eventThreshold, int socketType, string filename)
 //		// printf("Current event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
 //	}
 //	printf("eventSize is %d, eventCap is %d, i is %d", polarity->getEventNumber(), polarity->getEventCapacity(), i);
-
-	return retSocket;
+	if (eventsArraySize < event_num) return 1;
+	else return retSocket; 
 }

@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <stdio.h>
 #include "sds_utils.h"
 
 #ifdef __SDSCC__
@@ -241,8 +242,9 @@ int main(int argc, char *argv[]){
 
     int socketPort = 4097, eventThreshold = 50000, packetInterval = 10000, socketType = 0;  // Default value
     string filename = "box_trans-events.txt";
+//    string filename = "ConvertedFilesN1.txt";
 
-    if (argc == 2) socketPort = atoi(argv[1]);
+    if (argc == 2) filename = argv[1];//socketPort = atoi(argv[1]);
     if (argc == 3)
     {
     	socketPort = atoi(argv[1]);
@@ -332,8 +334,14 @@ int main(int argc, char *argv[]){
 //	// Set time interval
 //	davisHandle.configSet(CAER_HOST_CONFIG_PACKETS, CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL, packetInterval);
 
-	while (!globalShutdown.load(memory_order_relaxed)) {
+//	while (!globalShutdown.load(memory_order_relaxed)) {
 
+        //Delete existing OF file with the same name
+        char str[80];
+        strcpy(str, "OF_");
+        remove(strcat(str, filename.c_str()));
+
+	do{
         remoteSocket = abmof(socketPort, eventThreshold, socketType, filename);
 
 //		std::unique_ptr<libcaer::events::EventPacketContainer> packetContainer = davisHandle.dataGet();
@@ -388,7 +396,10 @@ int main(int argc, char *argv[]){
 //				printf("First frame event - ts: %d, sum: %" PRIu64 ".\n", ts, sum);
 //			}
 //		}
-	}
+//		if(remoteSocket == 1) break;
+	if(globalShutdown.load(memory_order_relaxed)) break;
+
+	} while(remoteSocket != 1);
 
 //	davisHandle.dataStop();
 
