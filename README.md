@@ -15,7 +15,7 @@ This branch contains a modified version of the original code, present in the [ma
 <!-- Usage -->
 ## Usage
 
-In order to use this code, first of all, the user needs to have a *.txt* file with event data in the following format:
+In order to use this code, first of all, the user needs to have a *.txt* file with event data in the following format, separated by tabs:
 
 | **TIMESTAMP** | **X**	| **Y** |
 |:-------------:|:-----:|:-----:|
