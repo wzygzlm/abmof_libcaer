@@ -19,11 +19,11 @@ In order to use this code, first of all, the user needs to have a *.txt* file wi
 
 > **TIMESTAMP**	**X**	**Y**
 <br/>
-1000000		100	256
+>1000000		100	256
 <br/>
-1000521		53	12
+>1000521		53	12
 <br/>
-1001028		243	118
+>1001028		243	118
 <br/>
 
 Information regarding polarity is discarded, so there is no need to include it in this file.
@@ -36,11 +36,11 @@ Then, a file containing optical flow vectors will be originated with the name `O
 
 > **TIMESTAMP**	**X**	**Y**	**Vx**	**Vy**	**Norm**
 <br/>
-1000000		100	256	2	5	5.39
+>1000000		100	256	2	5	5.39
 <br/>
-1000521		53	12	-1	1	1.41
+>1000521		53	12	-1	1	1.41
 <br/>
-1001028		243	118	7	-2	7.28
+>1001028		243	118	7	-2	7.28
 <br/>
 
 <!-- Considerations -->
