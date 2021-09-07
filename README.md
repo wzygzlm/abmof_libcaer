@@ -17,14 +17,11 @@ This branch contains a modified version of the original code, present in the [ma
 
 In order to use this code, first of all, the user needs to have a *.txt* file with event data in the following format:
 
-> **TIMESTAMP**	**X**	**Y**
-<br/>
->1000000		100	256
-<br/>
->1000521		53	12
-<br/>
->1001028		243	118
-<br/>
+| **TIMESTAMP** | **X**	| **Y** |
+|:-------------:|:-----:|:-----:|
+|1000000	|100	|256	|
+|1000521	|53	|12	|
+|1001028	|243	|118	|
 
 Information regarding polarity is discarded, so there is no need to include it in this file.
 The event files that will be used for optical flow extraction need to be in the same folder as the executable file `abmof_libcaer`. For an event file with the name `eventSample.txt`, to extract its optical flow, the user needs to run the following bash command:
@@ -34,14 +31,11 @@ sudo ./abmof_libcaer eventSample.txt
 
 Then, a file containing optical flow vectors will be originated with the name `OF_eventSample.txt`. Its outputs appears as follows:
 
-> **TIMESTAMP**	**X**	**Y**	**Vx**	**Vy**	**Norm**
-<br/>
->1000000		100	256	2	5	5.39
-<br/>
->1000521		53	12	-1	1	1.41
-<br/>
->1001028		243	118	7	-2	7.28
-<br/>
+| **TIMESTAMP** | **X** | **Y**	| **Vx** | **Vy** | **Norm** |
+|:-------------:|:-----:|:-----:||:-----:|:-----:|:-----:|
+|1000000	|100	|256	|2	|5	|5.39	|
+|1000521	|53	|12	|-1	|1	|1.41	|
+|1001028	|243	|118	|7	|-2	|7.28	|
 
 <!-- Considerations -->
 ## Considerations
